@@ -1,6 +1,13 @@
 # CPython-based Extention for Image Manipulation
 
-### Team members:
+<!-- TOC -->
+* [CPython-based Extention for Image Manipulation](#cpython-based-extention-for-image-manipulation)
+  * [Team members:](#team-members)
+  * [Project Overview](#project-overview)
+  * [Used tools and dependencies](#used-tools-and-dependencies)
+<!-- TOC -->
+
+## Team members:
 - Konrad Bodzioch
 - Dominik Breksa
 - Miłosz Góralczyk
