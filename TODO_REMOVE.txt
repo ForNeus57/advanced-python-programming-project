@@ -1,0 +1,4 @@
+Add codecov to projetct!!!!
+Add pytest execution to project!!!!
+Add basic unit test just as a start???
+
