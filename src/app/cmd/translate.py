@@ -1,17 +1,17 @@
-from argparse import Namespace, ArgumentParser
+from argparse import ArgumentParser, Namespace
 
 from app.cmd.cmd_command import CmdCommand
 
 
-class RotateCommand(CmdCommand):
+class TranslateCommand(CmdCommand):
 
     @classmethod
     def name(cls) -> str:
-        return 'rotate'
+        return 'translate'
 
     @classmethod
     def help(cls) -> str:
-        return 'Rotate the image'
+        return 'Translate the image'
 
     @classmethod
     def parser(cls, parser: ArgumentParser) -> str:
