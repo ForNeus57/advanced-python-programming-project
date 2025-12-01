@@ -17,10 +17,10 @@ def get_parser() -> ArgumentParser:
     for command_class in [RotateCommand, ScaleCommand, TranslateCommand]:
         command = command_class()
 
-        parser = subparser.add_parser(name=command_class.name(),
+        command_parser = subparser.add_parser(name=command_class.name(),
                                       help=command_class.help())
-        parser.set_defaults(func=command)
+        command_parser.set_defaults(func=command)
 
-        command_class.parser(parser)
+        command_class.parser(command_parser)
 
     return parser
