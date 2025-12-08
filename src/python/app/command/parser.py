@@ -12,8 +12,6 @@ from app.operation.operation import Operation
 from app.operation.roll import RollOperation
 
 from app.operation.rotate90 import Rotate90Operation
-from app.operation.scale import ScaleOperation
-from app.operation.translate import TranslateOperation
 
 
 def get_parser() -> ArgumentParser:

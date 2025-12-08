@@ -23,10 +23,12 @@ class GrayscaleOperation(Operation):
         pass
 
     def __call__(self, args: Namespace, input_image: Image) -> Image:
-        return Image(np.expand_dims(np.clip(
+        return Image(np.repeat(np.expand_dims(np.clip(
             0.2126 * input_image.data[:, :, 0]
             + 0.7152 * input_image.data[:, :, 1]
             + 0.0722 * input_image.data[:, :, 1],
             a_min=0.,
             a_max=255.).astype(np.uint8),
+            axis=-1),
+            repeats=3,
             axis=-1))
