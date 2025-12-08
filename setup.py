@@ -3,9 +3,11 @@ import numpy
 
 def main() -> None:
     setup(ext_modules=[
-        Extension('app.fast', ['src/app/fast/foo.c'], include_dirs=[numpy.get_include()])
+        Extension(name='app.fast',
+                  sources=['src/cpp/fast/foo.cpp'],
+                  include_dirs=[numpy.get_include()],
+                  language='c++'),
     ])
-
 
 if __name__ == '__main__':
     main()
