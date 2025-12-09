@@ -18,4 +18,3 @@ ruff:
 
 flake8:
 	flake8 ./src/python/
-

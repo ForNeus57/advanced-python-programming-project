@@ -1,8 +1,5 @@
 from abc import ABC, abstractmethod
 from argparse import Namespace, ArgumentParser
-from typing import final
-
-import numpy as np
 
 from app.image.image import Image
 

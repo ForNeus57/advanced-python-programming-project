@@ -9,31 +9,39 @@ numpy_system(PyObject *self, PyObject *args)
     int sts;
 
     if (!PyArg_ParseTuple(args, "s", &command))
+    {
         return NULL;
+    }
+
     sts = system(command);
     return PyLong_FromLong(sts);
 }
 
 static PyObject * 
-numpy_add(PyObject *self, PyObject *args){
+numpy_add(PyObject *self, PyObject *args)
+{
     PyArrayObject *arr;
     PyArg_ParseTuple(args, "O", &arr);
-    if(PyErr_Occurred()){
+    if(PyErr_Occurred())
+    {
         return NULL;
     }
-    if(!PyArray_Check(arr) || PyArray_TYPE(arr) != NPY_DOUBLE) {
+    if(!PyArray_Check(arr) || PyArray_TYPE(arr) != NPY_DOUBLE)
+    {
         PyErr_SetString(PyExc_TypeError, "Argument must be a numpy array of type double!");
         return NULL;
     }
 
 
-    double *data = (double *) PyArray_DATA(arr);
+    double *data = reinterpret_cast<double *>(PyArray_DATA(arr));
     int64_t size = PyArray_SIZE(arr);
 
-    double total=0;
-    for (int i=0; i < size; i++){
+    double total = 0;
+    for (int i = 0; i < size; i++)
+    {
         total += data[i];
     }
+
     return PyFloat_FromDouble(total);
 }
 
@@ -42,13 +50,15 @@ static PyObject *SpamError = NULL;
 static int
 numpy_module_exec(PyObject *m)
 {
-    if (SpamError != NULL) {
+    if (SpamError != NULL)
+    {
         PyErr_SetString(PyExc_ImportError,
                         "cannot initialize numpy module more than once");
         return -1;
     }
     SpamError = PyErr_NewException("numpy.error", NULL, NULL);
-    if (PyModule_AddObjectRef(m, "SpamError", SpamError) < 0) {
+    if (PyModule_AddObjectRef(m, "SpamError", SpamError) < 0)
+    {
         return -1;
     }
 
@@ -62,7 +72,7 @@ static PyMethodDef numpy_methods[] = {
 };
 
 static PyModuleDef_Slot numpy_module_slots[] = {
-    {Py_mod_exec, (void*) numpy_module_exec},
+    {Py_mod_exec, reinterpret_cast<void*>(numpy_module_exec)},
     {0, NULL}
 };
 
