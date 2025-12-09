@@ -33,11 +33,11 @@ numpy_add(PyObject *self, PyObject *args)
     }
 
 
-    double *data = (double *) PyArray_DATA(arr);
+    double *data = reinterpret_cast<double *>(PyArray_DATA(arr));
     int64_t size = PyArray_SIZE(arr);
 
-    double total=0;
-    for (int i=0; i < size; i++)
+    double total = 0;
+    for (int i = 0; i < size; i++)
     {
         total += data[i];
     }
@@ -72,7 +72,7 @@ static PyMethodDef numpy_methods[] = {
 };
 
 static PyModuleDef_Slot numpy_module_slots[] = {
-    {Py_mod_exec, (void*) numpy_module_exec},
+    {Py_mod_exec, reinterpret_cast<void*>(numpy_module_exec)},
     {0, NULL}
 };
 

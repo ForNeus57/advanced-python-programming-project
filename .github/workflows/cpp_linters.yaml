@@ -31,4 +31,4 @@ jobs:
       - name: Install cpplint
         run: pipx install cpplint
       - name: Run cpplint
-        run: cpplint --filter=-whitespace/line_length,-whitespace/parens ./src/cpp/fast/*
+        run: cpplint --filter=-whitespace/braces --linelength=120 ./src/cpp/fast/*
