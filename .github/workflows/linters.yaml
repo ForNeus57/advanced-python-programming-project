@@ -20,13 +20,13 @@ jobs:
           python-version: 3.13
 
       - name: Install libraries
-        run: make python-install-editable
+        run: make python-install
 
       - name: mypy
-        run: mypy ./src
+        run: make mypy
 
       - name: ruff
-        run: ruff check .
+        run: make ruff
       
       - name: flake8
-        run: flake8 .
+        run: make flake8
