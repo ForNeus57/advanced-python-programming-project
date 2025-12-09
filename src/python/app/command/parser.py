@@ -34,8 +34,7 @@ def get_parser() -> ArgumentParser:
     subparser = parser.add_subparsers(required=True,
                                       help='Command to be performed on an image')
 
-    operation_class: type[Operation]
-    for operation_class in [Rotate90Operation, IdentityOperation, FlipOperation, BGR2RGBOperation, RollOperation, GrayscaleOperation, HistogramEqualizationOperation]:
+    for operation_class in available_commands():
         operation = operation_class()
 
         operation_parser = subparser.add_parser(name=operation_class.name(),
@@ -45,6 +44,7 @@ def get_parser() -> ArgumentParser:
         operation_class.parser(operation_parser)
 
     return parser
+
 
 def prepare_command(command: Operation) -> Callable[[Namespace], int]:
 
@@ -61,3 +61,15 @@ def prepare_command(command: Operation) -> Callable[[Namespace], int]:
         return 0
 
     return wrapper
+
+
+def available_commands():
+    return [
+        Rotate90Operation,
+        IdentityOperation,
+        FlipOperation,
+        BGR2RGBOperation,
+        RollOperation,
+        GrayscaleOperation,
+        HistogramEqualizationOperation,
+    ]

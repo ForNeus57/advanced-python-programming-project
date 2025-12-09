@@ -1,8 +1,6 @@
 from abc import abstractmethod, ABC
 from typing import BinaryIO
 
-import numpy as np
-
 from app.image.image import Image
 
 
