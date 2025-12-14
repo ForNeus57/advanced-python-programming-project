@@ -1,5 +1,8 @@
 # CPython-based Extension for Image Manipulation
 
+[![CPPLinters](https://github.com/ForNeus57/advanced-python-programming-project/actions/workflows/cpp_linters.yaml/badge.svg)](https://github.com/ForNeus57/advanced-python-programming-project/actions/workflows/cpp_linters.yaml)
+[![Linters](https://github.com/ForNeus57/advanced-python-programming-project/actions/workflows/linters.yaml/badge.svg)](https://github.com/ForNeus57/advanced-python-programming-project/actions/workflows/linters.yaml)
+
 <!-- TOC -->
 * [CPython-based Extension for Image Manipulation](#cpython-based-extension-for-image-manipulation)
     * [Team members](#team-members)
