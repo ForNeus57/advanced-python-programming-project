@@ -1,5 +1,4 @@
 import enum
-from typing import Self
 
 from app.error.unknown_format_exception import UnknownFormatException
 from app.io.bmp import BMPReader, BMPWriter
@@ -11,7 +10,7 @@ class KnownFormat(enum.Enum):
     BMP = 0
 
     @classmethod
-    def from_string(cls, data_format: str) -> Self:
+    def from_string(cls, data_format: str) -> 'KnownFormat':
         match data_format:
             case 'bmp':
                 return cls.BMP
@@ -24,7 +23,7 @@ class KnownFormat(enum.Enum):
         return [e.name.lower() for e in cls]
 
     @classmethod
-    def default(cls) -> Self:
+    def default(cls) -> 'KnownFormat':
         return KnownFormat.BMP
 
 
@@ -36,6 +35,7 @@ def get_reader_from_format(data_format: KnownFormat) -> FormatReader:
 
         case _:
             assert False, "unreachable"
+
 
 def get_writer_from_format(data_format: KnownFormat) -> FormatWriter:
 

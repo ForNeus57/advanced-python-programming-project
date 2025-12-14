@@ -46,7 +46,8 @@ class BMPReader(FormatReader):
         assert panes == 1
         assert bits_per_pixel in (1, 4, 8, 16, 24, 32)
 
-        compression_method, raw_bitmap_data_size, horizontal_resolution, vertical_resolution, num_colors, num_important_colors = \
+        compression_method, raw_bitmap_data_size, horizontal_resolution, vertical_resolution, \
+            num_colors, num_important_colors = \
             struct.unpack('IIiiII', dib_header_no_size[12:])
         assert compression_method == 0
         assert raw_bitmap_data_size != 0
@@ -61,7 +62,8 @@ class BMPReader(FormatReader):
         num_colors_end = bits_per_pixel // 8
         return Image(data=np.flip(
             np.flip(
-                np.frombuffer(bytes(image_bytes), dtype=np.uint8).reshape(image_height, image_width, num_colors_end)[:, :, ::-1],
+                np.frombuffer(bytes(image_bytes),
+                              dtype=np.uint8).reshape(image_height, image_width, num_colors_end)[:, :, ::-1],
                 axis=0
             ),
             axis=1)
