@@ -10,6 +10,9 @@ python-install-development:
 python-install-editable:
 	pip3 install -e .[development]
 
+clang-tidy:
+	clang-tidy $(shell find ./src/cpp/ -name '*.hpp' -o -name '*.cpp') -- -I$(shell python3 -c "import sysconfig; print(sysconfig.get_path('include'))") -I$(shell python3 -c "import numpy; print(numpy.get_include())")
+
 mypy:
 	mypy ./src/python/
 

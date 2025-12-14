@@ -20,15 +20,7 @@ jobs:
           python-version: 3.13
 
       - name: Install libraries
-        run: make python-install-editable
+        run: make python-install-development
 
-      - name: Install pipx
-        run: | 
-          sudo apt update
-          sudo apt install pipx
-          pipx ensurepath
-          sudo pipx ensurepath --global
-      - name: Install cpplint
-        run: pipx install cpplint
-      - name: Run cpplint
-        run: cpplint --filter=-whitespace/braces --linelength=120 ./src/cpp/fast/*
+      - name: clang-tidy
+        run: make clang-tidy
