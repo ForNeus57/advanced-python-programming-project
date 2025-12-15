@@ -6,6 +6,7 @@ from app.error.unknown_format_exception import UnknownFormatException
 from app.io.bmp import BMPReader, BMPWriter
 from app.io.format_reader import IFormatReader
 from app.io.format_writer import IFormatWriter
+from app.io.png import PNGWriter, PNGReader
 
 
 class KnownFormat(enum.Enum):
@@ -25,6 +26,9 @@ class KnownFormat(enum.Enum):
             case 'bmp':
                 return cls.BMP
 
+            case 'png':
+                return cls.PNG
+
             case _:
                 raise UnknownFormatException(data_format)
 
@@ -38,7 +42,7 @@ class KnownFormat(enum.Enum):
     def default(cls) -> 'KnownFormat':
         """Return default format for commandline to use"""
 
-        return KnownFormat.BMP
+        return KnownFormat.PNG
 
 
 def get_reader_from_format(data_format: KnownFormat) -> IFormatReader:
@@ -47,6 +51,9 @@ def get_reader_from_format(data_format: KnownFormat) -> IFormatReader:
     match data_format:
         case KnownFormat.BMP:
             return BMPReader()
+
+        case KnownFormat.PNG:
+            return PNGReader()
 
         case _:
             assert False, "unreachable"
@@ -58,6 +65,9 @@ def get_writer_from_format(data_format: KnownFormat) -> IFormatWriter:
     match data_format:
         case KnownFormat.BMP:
             return BMPWriter()
+
+        case KnownFormat.PNG:
+            return PNGWriter()
 
         case _:
             assert False, "unreachable"

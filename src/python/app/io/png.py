@@ -1,0 +1,395 @@
+"""Module providing serialization and deserialization for PNG format (https://en.wikipedia.org/wiki/PNG)"""
+
+import struct
+import zlib
+from dataclasses import dataclass, field, astuple
+from enum import IntEnum
+from typing import final, BinaryIO, override, ClassVar, Sequence
+
+import numpy as np
+
+from app.error.invalid_format_exception import InvalidFormatException
+from app.image.image import Image
+from app.io.format_reader import IFormatReader
+from app.io.format_writer import IFormatWriter
+
+
+@dataclass(slots=True, frozen=True)
+class PNGSignature:
+    """Implements the struct for the PNG file signature"""
+
+    SIGNATURE_LENGTH: ClassVar[int] = 8
+    START_TRANSMISSION_BYTE: ClassVar[int] = 0x89
+    ASCII_P: ClassVar[int] = ord('P')
+    ASCII_N: ClassVar[int] = ord('N')
+    ASCII_G: ClassVar[int] = ord('G')
+    DOS_CRLF: ClassVar[int] = 0x0D0A
+    DOS_STOP_DISPLAY: ClassVar[int] = 0x1A
+    UNIX_ENDING: ClassVar[int] = 0x0A
+
+    start_transmission_byte: int
+    signature_p: int
+    signature_n: int
+    signature_g: int
+    dos_line_ending: int
+    dos_stop_display: int
+    unix_ending: int
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> 'PNGSignature':
+        if len(data) < cls.SIGNATURE_LENGTH:
+            raise InvalidFormatException(f"Signature too short, received: {len(data)} instead of {cls.SIGNATURE_LENGTH}")
+
+        return cls(*struct.unpack('>BBBBHBB', data))
+
+    @classmethod
+    def from_default(cls) -> 'PNGSignature':
+        return cls(start_transmission_byte=cls.START_TRANSMISSION_BYTE,
+                   signature_p=cls.ASCII_P,
+                   signature_n=cls.ASCII_N,
+                   signature_g=cls.ASCII_G,
+                   dos_line_ending=cls.DOS_CRLF,
+                   dos_stop_display=cls.DOS_STOP_DISPLAY,
+                   unix_ending=cls.UNIX_ENDING)
+
+    def __post_init__(self) -> None:
+        if self.start_transmission_byte != self.START_TRANSMISSION_BYTE:
+            raise InvalidFormatException("Invalid signature")
+
+        if self.signature_p != self.ASCII_P:
+            raise InvalidFormatException("Invalid signature")
+
+        if self.signature_n != self.ASCII_N:
+            raise InvalidFormatException("Invalid signature")
+
+        if self.signature_g != self.ASCII_G:
+            raise InvalidFormatException("Invalid signature")
+
+        if self.dos_line_ending != self.DOS_CRLF:
+            raise InvalidFormatException("Invalid signature")
+
+        if self.dos_stop_display != self.DOS_STOP_DISPLAY:
+            raise InvalidFormatException("Invalid signature")
+
+        if self.unix_ending != self.UNIX_ENDING:
+            raise InvalidFormatException("Invalid signature")
+
+    def __bytes__(self) -> bytes:
+        return struct.pack('>BBBBHBB', *astuple(self))
+
+
+class ChunkType(IntEnum):
+    IHDR = 0x49484452
+    PLTE = 0x504C5445
+    IDAT = 0x49444154
+    IEND = 0x49454E44
+
+    tRNS = 0x74524E53
+    cHRM = 0x6348524D
+    gAMA = 0x67414D41
+    iCCP = 0x69434350
+    sBIT = 0x73424954
+    sRGB = 0x73524742
+    cICP = 0x63494350
+    mDCV = 0x6D444356
+    cLLI = 0x634C4C49
+
+    tEXt = 0x74455874
+    zTXt = 0x7A545874
+    iTXt = 0x69545874
+
+    bKGD = 0x624B4744
+    hIST = 0x68495354
+    pHYs = 0x70485973
+    sPLT = 0x73504C54
+    eXIf = 0x65584966
+    tIME = 0x74494D45
+    acTL = 0x6163544C
+    fcTL = 0x6663544C
+    fdAT = 0x66644154
+
+    @classmethod
+    def map_data_to_chunk_type(cls, data: bytes) -> 'ChunkType':
+        return cls(*struct.unpack('>I', data))
+
+    def map_chunk_type_to_data_class(self):
+        match self:
+            case ChunkType.IHDR:
+                return IHDRData
+
+            case ChunkType.PLTE:
+                return PLTEData
+
+            case ChunkType.IDAT:
+                return IDATData
+
+            case ChunkType.IEND:
+                return IENDData
+
+            case _:
+                return NotCriticalData
+
+
+@dataclass(slots=True, frozen=True)
+class IHDRData:
+    """IHDR"""
+
+    DATA_LENGTH: ClassVar[int] = 13
+
+    DEFLATE_COMPRESSION: ClassVar[int] = 0
+
+    FILTER_METHOD: ClassVar[int] = 0
+
+    WITH_NO_INTERLACE: ClassVar[int] = 0
+    WITH_INTERLACE_ADAM7: ClassVar[int] = 1
+
+    width: int
+    height: int
+    bit_depth: int
+    color_type: int
+    compression_method: int
+    filter_method: int
+    interlace_method: int
+
+    chunk_type: ChunkType = field(default=ChunkType.IHDR, init=False)
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> 'IHDRData':
+        if len(data) < cls.DATA_LENGTH:
+            raise InvalidFormatException(f"Header too short, received: {len(data)} instead of {cls.DATA_LENGTH}")
+
+        return cls(*struct.unpack('>IIBBBBB', data))
+
+    @classmethod
+    def from_numpy(cls, data: np.ndarray) -> 'IHDRData':
+        return cls(width=data.shape[0],
+                   height=data.shape[1],
+                   bit_depth=16 if data.dtype == np.uint16 else 8,
+                   color_type=6,
+                   compression_method=cls.DEFLATE_COMPRESSION,
+                   filter_method=cls.FILTER_METHOD,
+                   interlace_method=cls.WITH_NO_INTERLACE)
+
+    def __bytes__(self) -> bytes:
+        return struct.pack('>IIBBBBB', *astuple(self)[:-1])
+
+    def __post_init__(self) -> None:
+        if self.bit_depth not in {1, 2, 4, 8, 16}:
+            raise InvalidFormatException("Invalid IHDR")
+
+@dataclass(slots=True, frozen=True)
+class PLTEData:
+    """PLTE"""
+
+    palette_entries: np.ndarray
+
+    chunk_type: ChunkType = field(default=ChunkType.PLTE, init=False)
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> 'PLTEData':
+        length, remainder = divmod(len(data), 3)
+        if remainder != 0:
+            raise InvalidFormatException("Wrong Palette")
+
+        return cls(palette_entries=np.frombuffer(data, dtype=np.uint8).reshape((length, 3)))
+
+    def __bytes__(self) -> bytes:
+        return self.palette_entries.tobytes()
+
+    def __post_init__(self) -> None:
+        if len(self.palette_entries.shape) != 2:
+            raise InvalidFormatException("Wrong Palette")
+
+        if 1 <= self.palette_entries.shape[0] <= 256:
+            raise InvalidFormatException("Wrong Palette")
+
+        if self.palette_entries.shape[1] == 3:
+            raise InvalidFormatException("Wrong Palette")
+
+
+@dataclass(slots=True, frozen=True)
+class IDATData:
+    """IDAT"""
+
+    compressed_data: bytes
+
+    chunk_type: ChunkType = field(default=ChunkType.IDAT, init=False)
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> 'IDATData':
+        return cls(compressed_data=data)
+
+    @classmethod
+    def from_numpy(cls, data: np.ndarray) -> 'IDATData':
+
+        new_data = np.concatenate((data, np.full((data.shape[0], data.shape[1], 1), 255, dtype=np.uint8)), axis=2)
+        stream = bytearray()
+        for i in range(new_data.shape[0]):
+            stream += b'\0' + new_data[i].tobytes()
+
+        return cls(compressed_data=zlib.compress(stream))
+
+    def __bytes__(self) -> bytes:
+        return self.compressed_data
+
+
+@dataclass(slots=True, frozen=True)
+class IENDData:
+    """IEND"""
+
+    chunk_type: ChunkType = field(default=ChunkType.IEND, init=False)
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> 'IENDData':
+        if len(data) != 0:
+            raise InvalidFormatException("Data must be empty")
+
+        return cls()
+
+    def __bytes__(self) -> bytes:
+        return b''
+
+@dataclass(slots=True, frozen=True)
+class NotCriticalData:
+    """Other"""
+
+    data: bytes
+
+    chunk_type: ChunkType = field(default=ChunkType.zTXt, init=False)
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> 'NotCriticalData':
+        return cls(data=data)
+
+    def __bytes__(self) -> bytes:
+        return self.data
+
+
+@dataclass(slots=True, frozen=True)
+class PNGChunk[T]:
+    length: int
+    chunk_type: ChunkType
+    chunk_data: T
+    crc: int
+
+    @classmethod
+    def from_file(cls, data: bytes) -> tuple['PNGChunk', bytes]:
+        length, = struct.unpack('>I', data[:4])
+        chunk_type = ChunkType.map_data_to_chunk_type(data[4:8])
+        chunk_data = data[8:8 + length]
+        crc, = struct.unpack('!I', data[8 + length:8 + 4 + length])
+        rest = data[8 + 4 + length:]
+
+        return PNGChunk(length=length,
+                        chunk_type=chunk_type,
+                        chunk_data=chunk_type.map_chunk_type_to_data_class().from_bytes(chunk_data),
+                        crc=crc), rest
+
+    @classmethod
+    def from_chunk[U](cls, chunk: U) -> 'PNGChunk[U]':
+        chunk_bytes_data = bytes(chunk)
+        chunk_length = len(chunk_bytes_data)
+        chunk_type = chunk.chunk_type
+        chunk_crc = zlib.crc32(struct.pack('>I', chunk_type.value) + chunk_bytes_data)
+
+        return PNGChunk(length=chunk_length,
+                        chunk_type=chunk_type,
+                        chunk_data=chunk,
+                        crc=chunk_crc)
+
+    def __post_init__(self) -> None:
+        if self.crc != zlib.crc32(struct.pack('>I', self.chunk_type.value) + bytes(self.chunk_data)):
+            raise InvalidFormatException("CRC check sum is invalid")
+
+        if len(bytes(self.chunk_data)) != self.length:
+            raise InvalidFormatException("Chunk data is wrong")
+
+    def __bytes__(self) -> bytes:
+        return struct.pack('>II', self.length, self.chunk_type.value) \
+               + bytes(self.chunk_data) \
+               + struct.pack('>I', self.crc)
+
+
+@dataclass(slots=True)
+class PNG:
+    signature: PNGSignature
+    i_header: PNGChunk[IHDRData]
+    chunks: Sequence[PNGChunk]
+
+    @classmethod
+    def from_file(cls, file: BinaryIO) -> 'PNG':
+        signature = PNGSignature.from_bytes(file.read(PNGSignature.SIGNATURE_LENGTH))
+        all_data = file.read()
+        chunks = list()
+
+        i_header, all_data = PNGChunk.from_file(all_data)
+
+        while len(all_data) > 0:
+            chunk, all_data = PNGChunk.from_file(all_data)
+            chunks.append(chunk)
+
+        return cls(signature=signature,
+                   i_header=i_header,
+                   chunks=chunks)
+
+    @classmethod
+    def from_numpy(cls, data: np.ndarray) -> 'PNG':
+        i_header_chunk = IHDRData.from_numpy(data)
+        data_chunk = IDATData.from_numpy(data)
+        end_chunk = IENDData()
+
+        return cls(signature=PNGSignature.from_default(),
+                   i_header=PNGChunk.from_chunk(i_header_chunk),
+                   chunks=[PNGChunk.from_chunk(data_chunk),
+                           PNGChunk.from_chunk(end_chunk)])
+
+    def __post_init__(self) -> None:
+        if self.chunks[-1].chunk_type != ChunkType.IEND:
+            raise InvalidFormatException("Last chunk is not end")
+
+    def to_numpy(self) -> np.ndarray:
+        all_data_compressed = b''.join(x.chunk_data.compressed_data
+                                       for x in self.chunks
+                                       if x.chunk_type == ChunkType.IDAT)
+        result = zlib.decompress(all_data_compressed)
+
+        palette = [x.chunk_data.palette_entries for x in self.chunks if x.chunk_type == ChunkType.PLTE]
+
+        if len(palette) == 1:
+            return palette[np.frombuffer(result)].reshape(self.i_header.chunk_data.height, self.i_header.chunk_data.width, 3)
+
+        image_channels: int = 4
+        row_size = image_channels * self.i_header.chunk_data.width + 1
+
+        stream = bytearray()
+        for i in range(self.i_header.chunk_data.height):
+            stream += result[1 + i * row_size: (i + 1) * row_size]
+
+        return np.frombuffer(stream, dtype=np.uint8).reshape(self.i_header.chunk_data.height, self.i_header.chunk_data.width, 4)[:, :, :-1]
+
+
+    def to_file(self, file: BinaryIO) -> None:
+        file.write(bytes(self.signature))
+        file.write(bytes(self.i_header))
+        for chunk in self.chunks:
+            file.write(bytes(chunk))
+
+
+@final
+class PNGReader(IFormatReader):
+    """Class that deserializes PNG format to Image"""
+
+    @override
+    def read_format(self, file: BinaryIO) -> Image:
+        png = PNG.from_file(file)
+        return Image(data=png.to_numpy())
+
+
+@final
+class PNGWriter(IFormatWriter):
+    """Class that serializes Image to PNG format"""
+
+    @override
+    def write_format(self, file: BinaryIO, input_image: Image) -> None:
+        png = PNG.from_numpy(input_image.data)
+        return png.to_file(file)

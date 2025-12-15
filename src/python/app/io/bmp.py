@@ -38,7 +38,7 @@ class Signature(IntEnum):
 
 @dataclass(slots=True)
 class BitmapFileHeader:
-    """Implements the struct for the """
+    """Implements the struct for the Bitmap file header"""
 
     HEADER_LENGTH: ClassVar[int] = 14
 
@@ -53,7 +53,7 @@ class BitmapFileHeader:
         if len(data) < cls.HEADER_LENGTH:
             raise InvalidFormatException(f"Header too short, received: {len(data)} instead of {cls.HEADER_LENGTH}")
 
-        return cls(*struct.unpack('HIHHI', data))
+        return cls(*struct.unpack('>HIHHI', data))
 
     def __post_init__(self) -> None:
         if self.signature not in set(e.value for e in Signature):
@@ -68,11 +68,11 @@ class BitmapFileHeader:
 
 @dataclass(slots=True)
 class BMP:
-    pass
+    header: BitmapFileHeader
 
 
 @final
-class BMPReader(IFormatReader):    # pylint: disable=too-few-public-methods
+class BMPReader(IFormatReader):
     """Class that deserializes BMP format to Image"""
 
     @override
@@ -108,12 +108,12 @@ class BMPReader(IFormatReader):    # pylint: disable=too-few-public-methods
 
 
 @final
-class BMPWriter(IFormatWriter):    # pylint: disable=too-few-public-methods
+class BMPWriter(IFormatWriter):
     """Class that serializes Image to BMP format"""
 
+    @override
     def write_format(self, file: BinaryIO, input_image: Image) -> None:
         input_arr = input_image.data
-        input_arr = np.flip(np.flip(input_arr[:, :, ::-1], axis=1), axis=0)
 
         image_height, image_width, num_colors = input_arr.shape
         bits_per_pixel = num_colors * 8
