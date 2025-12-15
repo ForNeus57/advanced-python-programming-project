@@ -1,14 +1,17 @@
+"""Module that performs histogram equalisation operation"""
+
 from argparse import Namespace, ArgumentParser
-from typing import final
+from typing import final, override
 
 import numpy as np
 
 from app.image.image import Image
-from app.operation.operation import Operation
+from app.operation.ioperation import IOperation
 
 
 @final
-class HistogramEqualizationOperation(Operation):
+class HistogramEqualization(IOperation):
+    """Class that performs histogram equalisation on the image"""
 
     @classmethod
     def name(cls) -> str:
@@ -22,16 +25,19 @@ class HistogramEqualizationOperation(Operation):
     def parser(cls, parser: ArgumentParser) -> None:
         pass
 
+    @override
     def __call__(self, args: Namespace, input_image: Image) -> Image:
         output_image = np.empty_like(input_image.data)
 
-        output_image[:, :, 0] = self.equalize_chanel(input_image.data[:, :, 0])
-        output_image[:, :, 1] = self.equalize_chanel(input_image.data[:, :, 1])
-        output_image[:, :, 2] = self.equalize_chanel(input_image.data[:, :, 2])
+        for channel in range(input_image.data.shape[-1]):
+            output_image[:, :, channel] = self.equalize_chanel(input_image.data[:, :, channel])
 
         return Image(data=output_image)
 
-    def equalize_chanel(self, image: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def equalize_chanel(image: np.ndarray) -> np.ndarray:
+        """This method performs histogram equalisation on one input channel of the image"""
+
         image_histogram, bins = np.histogram(image.flatten(), 256, density=True)
         cdf = image_histogram.cumsum()
         cdf = (256 - 1) * cdf / cdf[-1]

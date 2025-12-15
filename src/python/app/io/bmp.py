@@ -1,15 +1,21 @@
+"""Module providing serialization and deserialization for BMP format (https://en.wikipedia.org/wiki/BMP_file_format)"""
+
 import struct
 from enum import IntEnum
-from typing import final, BinaryIO, override
+from typing import final, BinaryIO, override, ClassVar
+from dataclasses import dataclass
 
 import numpy as np
 
+from app.error.invalid_format_exception import InvalidFormatException
 from app.image.image import Image
-from app.io.format_reader import FormatReader
-from app.io.format_writer import FormatWriter
+from app.io.format_reader import IFormatReader
+from app.io.format_writer import IFormatWriter
 
 
-class DBIHeader(IntEnum):
+class DBIHeaderType(IntEnum):
+    """Enum containing all the possible DBI headers and their lengths"""
+
     BITMAP_CORE_HEADER = 12
     OS22X_BITMAP_HEADER = 16
     BITMAP_INFO_HEADER = 40
@@ -19,22 +25,59 @@ class DBIHeader(IntEnum):
     BITMAP_V5_HEADER = 124
 
 
+class Signature(IntEnum):
+    """Enum containing all possible signature values"""
+
+    BM = 16973
+    BA = 16961
+    CI = 17225
+    CP = 17232
+    IC = 18755
+    PT = 20564
+
+
+@dataclass(slots=True)
+class BitmapFileHeader:
+    """Implements the struct for the """
+
+    HEADER_LENGTH: ClassVar[int] = 14
+
+    signature: int
+    file_size: int
+    reserved_1: int
+    reserved_2: int
+    file_offset_to_pixel_array: int
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> 'BitmapFileHeader':
+        if len(data) < cls.HEADER_LENGTH:
+            raise InvalidFormatException(f"Header too short, received: {len(data)} instead of {cls.HEADER_LENGTH}")
+
+        return cls(*struct.unpack('HIHHI', data))
+
+    def __post_init__(self) -> None:
+        if self.signature not in set(e.value for e in Signature):
+            raise InvalidFormatException("Invalid signature")
+
+        if self.file_size < self.HEADER_LENGTH + DBIHeaderType.BITMAP_CORE_HEADER:
+            raise InvalidFormatException("File too short to parse the next data")
+
+        if self.file_offset_to_pixel_array > self.file_size:
+            raise InvalidFormatException("Invalid offset to pixel array")
+
+
+@dataclass(slots=True)
+class BMP:
+    pass
+
+
 @final
-class BMPReader(FormatReader):
+class BMPReader(IFormatReader):    # pylint: disable=too-few-public-methods
+    """Class that deserializes BMP format to Image"""
 
     @override
     def read_format(self, file: BinaryIO) -> Image:
-        header = file.read(14)
-        assert len(header) == 14
-
-        signature_first, signature_second = struct.unpack('BB', header[:2])
-        # signature_first, signature_second = hex(signature_first), hex(signature_second)
-        assert (signature_first, signature_second) in [(0x42, 0x4D), (0x42, 0x41), (0x43, 0x49), (0x43, 0x50),
-                                                       (0x49, 0x43), (0x50, 0x54)]
-
-        file_size, = struct.unpack('I', header[2:6])
-        res1, res2 = struct.unpack('HH', header[6:10])
-        file_offset_to_pixel_array, = struct.unpack('I', header[10:])
+        header = BitmapFileHeader.from_bytes(data=file.read(BitmapFileHeader.HEADER_LENGTH))
 
         dib_header_size = file.read(4)
         dib_header_size, = struct.unpack('I', dib_header_size)
@@ -60,18 +103,13 @@ class BMPReader(FormatReader):
             image_bytes += file.read(row_size)[:row_size - padding]
 
         num_colors_end = bits_per_pixel // 8
-        return Image(data=np.flip(
-            np.flip(
-                np.frombuffer(bytes(image_bytes),
-                              dtype=np.uint8).reshape(image_height, image_width, num_colors_end)[:, :, ::-1],
-                axis=0
-            ),
-            axis=1)
-        )
+        return Image(data=np.frombuffer(bytes(image_bytes),
+                                        dtype=np.uint8).reshape(image_height, image_width, num_colors_end))
 
 
 @final
-class BMPWriter(FormatWriter):
+class BMPWriter(IFormatWriter):    # pylint: disable=too-few-public-methods
+    """Class that serializes Image to BMP format"""
 
     def write_format(self, file: BinaryIO, input_image: Image) -> None:
         input_arr = input_image.data

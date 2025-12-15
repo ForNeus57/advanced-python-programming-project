@@ -1,27 +1,23 @@
+"""Module containing functions that provide functionality related to commandline arguments parsing"""
+
 from argparse import ArgumentParser, Namespace
 from typing import Callable
 
 from app.command.io import map_input, map_output
 from app.io.format_factory import get_reader_from_format, KnownFormat, get_writer_from_format
-from app.operation.bgr2rgb import BGR2RGBOperation
-from app.operation.flip import FlipOperation
-from app.operation.grayscale import GrayscaleOperation
-from app.operation.histogram_equalization import HistogramEqualizationOperation
-from app.operation.identity import IdentityOperation
-from app.operation.operation import Operation
-from app.operation.roll import RollOperation
-
-from app.operation.rotate90 import Rotate90Operation
+from app.operation import Rotate90, Identity, Flip, BGR2RGB, Roll, Grayscale, HistogramEqualization, IOperation
 
 
 def get_parser() -> ArgumentParser:
+    """Functions that initialises the Argument Parser"""
+
     parser = ArgumentParser(prog='PROG',
                             description='Image CLI that performs different image operations like scaling, rotating etc')
-    parser.add_argument('input',
+    parser.add_argument('--input',
                         nargs='?',
                         default=None,
                         help='program input')
-    parser.add_argument('output',
+    parser.add_argument('--output',
                         nargs='?',
                         default=None,
                         help='program output')
@@ -32,7 +28,7 @@ def get_parser() -> ArgumentParser:
                         help='program output')
 
     subparser = parser.add_subparsers(required=True,
-                                      help='Command to be performed on an image')
+                                      help='Command or operation to be performed on an image')
 
     for operation_class in available_commands():
         operation = operation_class()
@@ -46,7 +42,8 @@ def get_parser() -> ArgumentParser:
     return parser
 
 
-def prepare_command(command: Operation) -> Callable[[Namespace], int]:
+def prepare_command(command: IOperation) -> Callable[[Namespace], int]:
+    """Function that decorates the operation in order to provide input and output to it"""
 
     def wrapper(args: Namespace) -> int:
         data_format = KnownFormat.from_string(args.format)
@@ -64,12 +61,14 @@ def prepare_command(command: Operation) -> Callable[[Namespace], int]:
 
 
 def available_commands():
+    """Function that returns all the supported commandline operations by the program"""
+
     return [
-        Rotate90Operation,
-        IdentityOperation,
-        FlipOperation,
-        BGR2RGBOperation,
-        RollOperation,
-        GrayscaleOperation,
-        HistogramEqualizationOperation,
+        Rotate90,
+        Identity,
+        Flip,
+        BGR2RGB,
+        Roll,
+        Grayscale,
+        HistogramEqualization,
     ]
