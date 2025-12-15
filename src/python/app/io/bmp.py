@@ -77,7 +77,7 @@ class BMPReader(IFormatReader):    # pylint: disable=too-few-public-methods
 
     @override
     def read_format(self, file: BinaryIO) -> Image:
-        header = BitmapFileHeader.from_bytes(data=file.read(BitmapFileHeader.HEADER_LENGTH))
+        # header = BitmapFileHeader.from_bytes(data=file.read(BitmapFileHeader.HEADER_LENGTH))
 
         dib_header_size = file.read(4)
         dib_header_size, = struct.unpack('I', dib_header_size)
