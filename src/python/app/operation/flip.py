@@ -34,9 +34,11 @@ class Flip(IOperation):
     @override
     def __call__(self, args: Namespace, input_image: Image) -> Image:
         if args.horizontal:
-            return Image(np.flip(input_image.data, axis=1))
+            input_image = Image(np.flip(input_image.data, axis=1))
 
         if args.vertical:
-            return Image(np.flip(input_image.data, axis=0))
+            input_image = Image(np.flip(input_image.data, axis=0))
 
-        assert False, 'unreachable'
+        if not args.horizontal and not args.vertical:
+            assert False, 'unreachable'
+        return input_image
