@@ -1,14 +1,17 @@
+"""Module providing vertical or horizonal shift of the image"""
+
 from argparse import ArgumentParser, Namespace
-from typing import final
+from typing import final, override
 
 import numpy as np
 
 from app.image.image import Image
-from app.operation.operation import Operation
+from app.operation.ioperation import IOperation
 
 
 @final
-class RollOperation(Operation):
+class Roll(IOperation):
+    """Performs vertical or horizontal shift in pixels on the image"""
 
     @classmethod
     def name(cls) -> str:
@@ -29,6 +32,7 @@ class RollOperation(Operation):
                             dest='hor_shift',
                             type=int)
 
+    @override
     def __call__(self, args: Namespace, input_image: Image) -> Image:
         return Image(data=np.roll(
             np.roll(

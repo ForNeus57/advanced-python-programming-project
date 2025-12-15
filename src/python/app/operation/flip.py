@@ -1,14 +1,17 @@
+"""Module that implements the Flip Operation"""
+
 from argparse import Namespace, ArgumentParser
-from typing import final
+from typing import final, override
 
 import numpy as np
 
 from app.image.image import Image
-from app.operation.operation import Operation
+from app.operation.ioperation import IOperation
 
 
 @final
-class FlipOperation(Operation):
+class Flip(IOperation):
+    """Class that flips the image horizontally or vertically"""
 
     @classmethod
     def name(cls) -> str:
@@ -28,6 +31,7 @@ class FlipOperation(Operation):
                            dest='vertical',
                            action='store_true')
 
+    @override
     def __call__(self, args: Namespace, input_image: Image) -> Image:
         if args.horizontal:
             return Image(np.flip(input_image.data, axis=1))

@@ -1,4 +1,4 @@
-all:
+all: clang-tidy mypy ruff flake8 pylint
 	echo 'All'
 
 python-install:
@@ -23,4 +23,7 @@ ruff:
 	ruff check ./src/python/
 
 flake8:
-	flake8 ./src/python/
+	flake8 --ignore=E127 ./src/python/
+
+pylint:
+	pylint ./src/python/

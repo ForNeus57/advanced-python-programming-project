@@ -1,14 +1,17 @@
+"""Module providing implementation of the Grayscale operation"""
+
 from argparse import Namespace, ArgumentParser
-from typing import final
+from typing import final, override
 
 import numpy as np
 
 from app.image.image import Image
-from app.operation.operation import Operation
+from app.operation.ioperation import IOperation
 
 
 @final
-class GrayscaleOperation(Operation):
+class Grayscale(IOperation):
+    """Implements the grayscale operation, does nothing on grey images"""
 
     @classmethod
     def name(cls) -> str:
@@ -22,13 +25,18 @@ class GrayscaleOperation(Operation):
     def parser(cls, parser: ArgumentParser) -> None:
         pass
 
+    @override
     def __call__(self, args: Namespace, input_image: Image) -> Image:
-        return Image(np.repeat(np.expand_dims(np.clip(
-            0.2126 * input_image.data[:, :, 0]
-            + 0.7152 * input_image.data[:, :, 1]
-            + 0.0722 * input_image.data[:, :, 1],
-            a_min=0.,
-            a_max=255.).astype(np.uint8),
-            axis=-1),
-            repeats=3,
-            axis=-1))
+        if input_image.data.shape[-1] == 1:
+            return input_image
+
+        result_image = 0.2126 * input_image.data[:, :, 0] \
+                     + 0.7152 * input_image.data[:, :, 1] \
+                     + 0.0722 * input_image.data[:, :, 2]
+
+        return Image(data=np.repeat(a=np.expand_dims(a=np.clip(a=result_image,
+                                                               a_min=0.,
+                                                               a_max=255.).astype(np.uint8),
+                                                     axis=-1),
+                                    repeats=3,
+                                    axis=-1))
