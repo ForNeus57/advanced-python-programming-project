@@ -2,6 +2,7 @@
 
 [![C++ Linters](https://github.com/ForNeus57/advanced-python-programming-project/actions/workflows/cpp_linter.yaml/badge.svg)](https://github.com/ForNeus57/advanced-python-programming-project/actions/workflows/cpp_linter.yaml)
 [![Python Linters](https://github.com/ForNeus57/advanced-python-programming-project/actions/workflows/python_linter.yaml/badge.svg)](https://github.com/ForNeus57/advanced-python-programming-project/actions/workflows/python_linter.yaml)
+[![Run unit tests](https://github.com/ForNeus57/advanced-python-programming-project/actions/workflows/unit_tests.yaml/badge.svg)](https://github.com/ForNeus57/advanced-python-programming-project/actions/workflows/unit_tests.yaml)
 
 <!-- TOC -->
 * [CPython-based Extension for Image Manipulation](#cpython-based-extension-for-image-manipulation)
@@ -105,3 +106,4 @@ pytest==9.0.1
 ```
 
 -------------
+
