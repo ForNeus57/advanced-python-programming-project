@@ -27,3 +27,6 @@ flake8:
 
 pylint:
 	pylint ./src/python/
+
+pytest:
+	pytest

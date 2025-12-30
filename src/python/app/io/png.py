@@ -222,7 +222,7 @@ class IDATData:
     @classmethod
     def from_numpy(cls, data: np.ndarray) -> 'IDATData':
 
-        new_data = np.concatenate((data, np.full((data.shape[0], data.shape[1], 1), 255, dtype=np.uint8)), axis=2)
+        new_data = np.concatenate((np.full((data.shape[0], data.shape[1], 1), 255, dtype=np.uint8), data), axis=2)
         stream = bytearray()
         for i in range(new_data.shape[0]):
             stream += b'\0' + new_data[i].tobytes()

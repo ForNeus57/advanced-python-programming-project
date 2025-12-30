@@ -3,7 +3,7 @@
 from app.command.parser import get_parser
 
 
-def main() -> None:
+def main() -> int:
     """Main entrypoint for imcli program"""
     args = get_parser().parse_args()
     return args.func(args)
