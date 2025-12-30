@@ -30,9 +30,10 @@ class Grayscale(IOperation):
         if input_image.data.shape[-1] == 1:
             return input_image
 
-        result_image = 0.2126 * input_image.data[:, :, 0] \
-                     + 0.7152 * input_image.data[:, :, 1] \
-                     + 0.0722 * input_image.data[:, :, 2]
+        result_image = \
+            0.2126 * input_image.data[:, :, 0] \
+            + 0.7152 * input_image.data[:, :, 1] \
+            + 0.0722 * input_image.data[:, :, 2]
 
         return Image(data=np.repeat(a=np.expand_dims(a=np.clip(a=result_image,
                                                                a_min=0.,
