@@ -1,5 +1,4 @@
 import sysconfig
-import os
 
 from setuptools import setup, Extension
 import numpy as np
