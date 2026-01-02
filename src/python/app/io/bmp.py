@@ -17,13 +17,11 @@ from app.io.format_writer import IFormatWriter
 
 @final
 class BMPChecker(IFormatChecker):
+    """Class that checks if the BMP signature is present"""
 
     @override
     def check_format(self, file: BinaryIO) -> bool:
-        if check_compare(file, '424D'):
-            return True
-
-        return False
+        return check_compare(file, '424D')
 
     @override
     def type(self) -> KnownFormat:
@@ -67,6 +65,8 @@ class BitmapFileHeader:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> 'BitmapFileHeader':
+        """Additional constructor that serializes the BMP format signature"""
+
         if len(data) < cls.HEADER_LENGTH:
             raise InvalidFormatException(f"Header too short, received: {len(data)} instead of {cls.HEADER_LENGTH}")
 
@@ -85,16 +85,18 @@ class BitmapFileHeader:
 
 @dataclass(slots=True)
 class BMP:
+    """Class that represents the BMP file"""
+
     header: BitmapFileHeader
 
 
 @final
-class BMPReader(IFormatReader):
+class BMPReader(IFormatReader):     # pylint: disable=too-few-public-methods
     """Class that deserializes BMP format to Image"""
 
     @override
     def read_format(self, file: BinaryIO) -> Image:
-        header = BitmapFileHeader.from_bytes(data=file.read(BitmapFileHeader.HEADER_LENGTH))
+        _ = BitmapFileHeader.from_bytes(data=file.read(BitmapFileHeader.HEADER_LENGTH))
 
         dib_header_size = file.read(4)
         dib_header_size, = struct.unpack('I', dib_header_size)
@@ -125,7 +127,7 @@ class BMPReader(IFormatReader):
 
 
 @final
-class BMPWriter(IFormatWriter):
+class BMPWriter(IFormatWriter):     # pylint: disable=too-few-public-methods
     """Class that serializes Image to BMP format"""
 
     @override

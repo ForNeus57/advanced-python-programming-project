@@ -1,5 +1,5 @@
 """Module implementing routing functions for input image formats"""
-import os
+
 from typing import BinaryIO
 
 from app.error.unknown_format_exception import UnknownFormatException
@@ -13,6 +13,7 @@ from app.io.png import PNGWriter, PNGReader, PNGChecker
 
 
 def get_available_formats():
+    """Returns all supported format checkers"""
     return [
         BMPChecker(),
         PNGChecker(),
@@ -21,6 +22,8 @@ def get_available_formats():
 
 
 def determine_format(file: BinaryIO) -> KnownFormat:
+    """Function implementing the logic of parsing the format signature for available formats"""
+
     for format_checker in get_available_formats():
         if format_checker.check_format(file):
             reset_stream(file)

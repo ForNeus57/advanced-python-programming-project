@@ -1,3 +1,5 @@
+"""Module holding an enum for all the """
+
 import enum
 
 

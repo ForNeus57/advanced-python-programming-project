@@ -52,7 +52,9 @@ def prepare_command(command: IOperation) -> Callable[[Namespace], int]:
             data_format = determine_format(input_source)
 
             reader = get_reader_from_format(data_format)
-            writer = get_writer_from_format(data_format if args.output_format is None else KnownFormat.from_string(args.output_format))
+            writer = get_writer_from_format(data_format
+                                            if args.output_format is None
+                                            else KnownFormat.from_string(args.output_format))
 
             input_arr = reader.read_format(input_source)
             result = command(args, input_arr)
