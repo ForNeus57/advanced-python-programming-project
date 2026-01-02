@@ -142,15 +142,15 @@ class BMPWriter(IFormatWriter):     # pylint: disable=too-few-public-methods
 
         file_size = 54 + raw_bitmap_data_size
 
-        file.write(struct.pack('BB', 0x42, 0x4D))  # signature
-        file.write(struct.pack('I', file_size))  # file_size
-        file.write(struct.pack('HH', 0, 0))  # reserved1 & reserved2
-        file.write(struct.pack('I', 54))  # file_offset_to_pixel_array
-
-        file.write(struct.pack('I', 40))  # dbi header size
-        file.write(struct.pack('iiHH', image_width, image_height, 1, bits_per_pixel))
-        file.write(struct.pack('IIiiII', 0, raw_bitmap_data_size, 2834, 2834, 0, 0))
+        file.write(b''.join((
+            struct.pack('BB', 0x42, 0x4D),      # signature
+            struct.pack('I', file_size),        # file_size
+            struct.pack('HH', 0, 0),            # reserved1 & reserved2
+            struct.pack('I', 54),               # file_offset_to_pixel_array
+            struct.pack('I', 40),               # dbi header size
+            struct.pack('iiHH', image_width, image_height, 1, bits_per_pixel),
+            struct.pack('IIiiII', 0, raw_bitmap_data_size, 2834, 2834, 0, 0),
+        )))
 
         for i in range(image_height):
-            file.write(input_arr[i].tobytes())
-            file.write(bytes([0] * padding))
+            file.write(input_arr[i].tobytes() + bytes([0] * padding))

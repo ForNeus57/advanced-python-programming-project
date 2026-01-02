@@ -257,11 +257,16 @@ class IDATData(ChunkDataTypeSerializer):
         """Serialize for IDAT binary content"""
 
         new_data = np.concatenate((data, np.full((data.shape[0], data.shape[1], 1), 255, dtype=np.uint8)), axis=2)
-        stream = bytearray()
-        for i in range(new_data.shape[0]):
-            stream += b'\0' + new_data[i].tobytes()
 
-        return cls(compressed_data=zlib.compress(stream))
+        stream = bytearray()
+        compressor = zlib.compressobj(level=zlib.Z_BEST_SPEED)
+
+        for i in range(new_data.shape[0]):
+            stream += compressor.compress(b'\0' + new_data[i].tobytes())
+
+        stream += compressor.flush()
+
+        return cls(compressed_data=bytes(stream))
 
     @override
     def type(self) -> ChunkType:
@@ -401,17 +406,17 @@ class PNG:
                            PNGChunk.from_chunk(end_chunk)])
 
     def __post_init__(self) -> None:
-        if self.chunks[-1].type() != ChunkType.IEND:
+        if self.chunks[-1].chunk_type != ChunkType.IEND:
             raise InvalidFormatException("Last chunk is not end")
 
     def to_numpy(self) -> np.ndarray:
         """Serializer of the data to a numpy array"""
         all_data_compressed = b''.join(x.chunk_data.compressed_data
                                        for x in self.chunks
-                                       if x.type() == ChunkType.IDAT)
+                                       if x.chunk_type == ChunkType.IDAT)
         result = zlib.decompress(all_data_compressed)
 
-        palette = [x.chunk_data.palette_entries for x in self.chunks if x.type() == ChunkType.PLTE]
+        palette = [x.chunk_data.palette_entries for x in self.chunks if x.chunk_type == ChunkType.PLTE]
 
         if len(palette) == 1:
             return palette[np.frombuffer(result)].reshape(self.i_header.chunk_data.height,

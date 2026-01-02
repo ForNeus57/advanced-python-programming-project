@@ -1,5 +1,5 @@
 """Module for input/output operations related to parsing commandline"""
-
+from io import BytesIO
 from sys import stdin, stdout
 from typing import BinaryIO
 
@@ -10,7 +10,8 @@ def map_input(input_source: str) -> BinaryIO:
     if input_source is None:
         return stdin.buffer
 
-    return open(input_source, mode='rb')
+    with open(input_source, mode='rb', buffering=16384) as file:
+        return BytesIO(file.read())
 
 
 def map_output(output_source: str) -> BinaryIO:
@@ -19,4 +20,4 @@ def map_output(output_source: str) -> BinaryIO:
     if output_source is None:
         return stdout.buffer
 
-    return open(output_source, mode='wb')
+    return open(output_source, mode='wb', buffering=16384)
