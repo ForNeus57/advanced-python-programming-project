@@ -2,13 +2,15 @@ all: clang-tidy mypy ruff flake8 pylint
 	echo 'All'
 
 python-install:
+	pip3 install cuda-toolkit[cudart,nvcc,nvjpeg] == 12.4.1
 	pip3 install .
 
 python-install-development:
-
+	pip3 install cuda-toolkit[cudart,nvcc,nvjpeg] == 12.4.1
 	pip3 install .[development]
 
 python-install-editable:
+	pip3 install cuda-toolkit[cudart,nvcc,nvjpeg] == 12.4.1
 	pip3 install -e .[development]
 
 clang-format:
