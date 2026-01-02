@@ -1,48 +1,32 @@
 """Module implementing routing functions for input image formats"""
-
-import enum
+import os
+from typing import BinaryIO
 
 from app.error.unknown_format_exception import UnknownFormatException
-from app.io.bmp import BMPReader, BMPWriter
+from app.io.bmp import BMPReader, BMPWriter, BMPChecker
+from app.io.format_checker import reset_stream
 from app.io.format_reader import IFormatReader
 from app.io.format_writer import IFormatWriter
-from app.io.png import PNGWriter, PNGReader
+from app.io.jpeg import JPEGReader, JPEGWriter, JPEGChecker
+from app.io.known_format import KnownFormat
+from app.io.png import PNGWriter, PNGReader, PNGChecker
 
 
-class KnownFormat(enum.Enum):
-    """Enum providing all the image formats that are supported by the program"""
+def get_available_formats():
+    return [
+        BMPChecker(),
+        PNGChecker(),
+        JPEGChecker(),
+    ]
 
-    BMP = 0
-    PNG = enum.auto()
-    PBM = enum.auto()
-    PGM = enum.auto()
-    PPM = enum.auto()
 
-    @classmethod
-    def from_string(cls, data_format: str) -> 'KnownFormat':
-        """Additional constructor for this class"""
+def determine_format(file: BinaryIO) -> KnownFormat:
+    for format_checker in get_available_formats():
+        if format_checker.check_format(file):
+            reset_stream(file)
+            return format_checker.type()
 
-        match data_format:
-            case 'bmp':
-                return cls.BMP
-
-            case 'png':
-                return cls.PNG
-
-            case _:
-                raise UnknownFormatException(data_format)
-
-    @classmethod
-    def get_available_formats(cls) -> list[str]:
-        """Return default format for commandline to use"""
-
-        return [e.name.lower() for e in cls]
-
-    @classmethod
-    def default(cls) -> 'KnownFormat':
-        """Return default format for commandline to use"""
-
-        return KnownFormat.PNG
+    raise UnknownFormatException("The file signature is not recognized as a supported image format")
 
 
 def get_reader_from_format(data_format: KnownFormat) -> IFormatReader:
@@ -55,8 +39,10 @@ def get_reader_from_format(data_format: KnownFormat) -> IFormatReader:
         case KnownFormat.PNG:
             return PNGReader()
 
-        case _:
-            assert False, "unreachable"
+        case KnownFormat.JPEG:
+            return JPEGReader()
+
+    assert False, "unreachable"
 
 
 def get_writer_from_format(data_format: KnownFormat) -> IFormatWriter:
@@ -69,5 +55,7 @@ def get_writer_from_format(data_format: KnownFormat) -> IFormatWriter:
         case KnownFormat.PNG:
             return PNGWriter()
 
-        case _:
-            assert False, "unreachable"
+        case KnownFormat.JPEG:
+            return JPEGWriter()
+
+    assert False, "unreachable"

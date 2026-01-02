@@ -10,8 +10,25 @@ import numpy as np
 
 from app.error.invalid_format_exception import InvalidFormatException
 from app.image.image import Image
+from app.io.format_checker import IFormatChecker, check_compare
+from app.io.known_format import KnownFormat
 from app.io.format_reader import IFormatReader
 from app.io.format_writer import IFormatWriter
+
+
+@final
+class PNGChecker(IFormatChecker):
+
+    @override
+    def check_format(self, file: BinaryIO) -> bool:
+        if check_compare(file, '89504E470D0A1A0A'):
+            return True
+
+        return False
+
+    @override
+    def type(self) -> KnownFormat:
+        return KnownFormat.PNG
 
 
 @dataclass(slots=True, frozen=True)
@@ -162,8 +179,8 @@ class IHDRData:
 
     @classmethod
     def from_numpy(cls, data: np.ndarray) -> 'IHDRData':
-        return cls(width=data.shape[0],
-                   height=data.shape[1],
+        return cls(width=data.shape[1],
+                   height=data.shape[0],
                    bit_depth=16 if data.dtype == np.uint16 else 8,
                    color_type=6,
                    compression_method=cls.DEFLATE_COMPRESSION,
@@ -176,6 +193,7 @@ class IHDRData:
     def __post_init__(self) -> None:
         if self.bit_depth not in {1, 2, 4, 8, 16}:
             raise InvalidFormatException("Invalid IHDR")
+
 
 @dataclass(slots=True, frozen=True)
 class PLTEData:
@@ -222,7 +240,7 @@ class IDATData:
     @classmethod
     def from_numpy(cls, data: np.ndarray) -> 'IDATData':
 
-        new_data = np.concatenate((np.full((data.shape[0], data.shape[1], 1), 255, dtype=np.uint8), data), axis=2)
+        new_data = np.concatenate((data, np.full((data.shape[0], data.shape[1], 1), 255, dtype=np.uint8)), axis=2)
         stream = bytearray()
         for i in range(new_data.shape[0]):
             stream += b'\0' + new_data[i].tobytes()
@@ -248,6 +266,7 @@ class IENDData:
 
     def __bytes__(self) -> bytes:
         return b''
+
 
 @dataclass(slots=True, frozen=True)
 class NotCriticalData:

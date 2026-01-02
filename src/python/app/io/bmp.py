@@ -9,8 +9,25 @@ import numpy as np
 
 from app.error.invalid_format_exception import InvalidFormatException
 from app.image.image import Image
+from app.io.format_checker import IFormatChecker, check_compare
+from app.io.known_format import KnownFormat
 from app.io.format_reader import IFormatReader
 from app.io.format_writer import IFormatWriter
+
+
+@final
+class BMPChecker(IFormatChecker):
+
+    @override
+    def check_format(self, file: BinaryIO) -> bool:
+        if check_compare(file, '424D'):
+            return True
+
+        return False
+
+    @override
+    def type(self) -> KnownFormat:
+        return KnownFormat.BMP
 
 
 class DBIHeaderType(IntEnum):
@@ -77,7 +94,7 @@ class BMPReader(IFormatReader):
 
     @override
     def read_format(self, file: BinaryIO) -> Image:
-        # header = BitmapFileHeader.from_bytes(data=file.read(BitmapFileHeader.HEADER_LENGTH))
+        header = BitmapFileHeader.from_bytes(data=file.read(BitmapFileHeader.HEADER_LENGTH))
 
         dib_header_size = file.read(4)
         dib_header_size, = struct.unpack('I', dib_header_size)

@@ -1,3 +1,8 @@
 [build-system]
-requires = ["setuptools", "numpy==2.3.5", "cython"]
+requires = [
+    "setuptools",
+    "numpy==2.3.5",
+    "cython",
+    "cuda-toolkit[cudart,nvcc,nvjpeg]==12.4.1"
+]
 build-backend = "setuptools.build_meta"

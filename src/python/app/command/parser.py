@@ -4,7 +4,8 @@ from argparse import ArgumentParser, Namespace
 from typing import Callable
 
 from app.command.io import map_input, map_output
-from app.io.format_factory import get_reader_from_format, KnownFormat, get_writer_from_format
+from app.io.format_factory import get_reader_from_format, get_writer_from_format, determine_format
+from app.io.known_format import KnownFormat
 from app.operation import Rotate90, Identity, Flip, BGR2RGB, Roll, Grayscale, HistogramEqualization, IOperation
 
 
@@ -13,19 +14,20 @@ def get_parser() -> ArgumentParser:
 
     parser = ArgumentParser(prog='PROG',
                             description='Image CLI that performs different image operations like scaling, rotating etc')
-    parser.add_argument('--input',
+    parser.add_argument('input',
                         nargs='?',
                         default=None,
                         help='program input')
-    parser.add_argument('--output',
+    parser.add_argument('output',
                         nargs='?',
                         default=None,
                         help='program output')
-    parser.add_argument('--format',
+    parser.add_argument('--output-format',
                         nargs='?',
-                        default=KnownFormat.default().name.lower(),
+                        default=None,
                         choices=KnownFormat.get_available_formats(),
-                        help='program output')
+                        dest='output_format',
+                        help='change the output stream data format')
 
     subparser = parser.add_subparsers(required=True,
                                       help='Command or operation to be performed on an image')
@@ -46,14 +48,17 @@ def prepare_command(command: IOperation) -> Callable[[Namespace], int]:
     """Function that decorates the operation in order to provide input and output to it"""
 
     def wrapper(args: Namespace) -> int:
-        data_format = KnownFormat.from_string(args.format)
-        reader = get_reader_from_format(data_format)
-        writer = get_writer_from_format(data_format)
+        with map_input(args.input) as input_source:
+            data_format = determine_format(input_source)
 
-        with map_input(args.input) as input_source, map_output(args.output) as output_source:
+            reader = get_reader_from_format(data_format)
+            writer = get_writer_from_format(data_format if args.output_format is None else KnownFormat.from_string(args.output_format))
+
             input_arr = reader.read_format(input_source)
             result = command(args, input_arr)
-            writer.write_format(output_source, result)
+
+            with map_output(args.output) as output_source:
+                writer.write_format(output_source, result)
 
         return 0
 
