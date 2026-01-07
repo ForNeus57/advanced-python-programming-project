@@ -8,7 +8,7 @@ def map_input(input_source: str) -> BinaryIO:
     """Maps input source to stdin or to the file path"""
 
     if input_source is None:
-        return stdin.buffer
+        return BytesIO(stdin.buffer.read())
 
     with open(input_source, mode='rb', buffering=16384) as file:
         return BytesIO(file.read())

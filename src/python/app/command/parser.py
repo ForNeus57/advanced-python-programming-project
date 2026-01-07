@@ -14,13 +14,15 @@ def get_parser() -> ArgumentParser:
 
     parser = ArgumentParser(prog='PROG',
                             description='Image CLI that performs different image operations like scaling, rotating etc')
-    parser.add_argument('input',
+    parser.add_argument('--input', '-i',
                         nargs='?',
                         default=None,
+                        dest='input',
                         help='program input')
-    parser.add_argument('output',
+    parser.add_argument('--output', '-o',
                         nargs='?',
                         default=None,
+                        dest='output',
                         help='program output')
     parser.add_argument('--output-format',
                         nargs='?',
