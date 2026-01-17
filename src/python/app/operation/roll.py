@@ -23,11 +23,11 @@ class Roll(IOperation):
 
     @classmethod
     def parser(cls, parser: ArgumentParser) -> None:
-        parser.add_argument('--vertical-shift',
+        parser.add_argument('--vertical',
                             default=0,
                             dest='ver_shift',
                             type=int)
-        parser.add_argument('--horizontal-shift',
+        parser.add_argument('--horizontal',
                             default=0,
                             dest='hor_shift',
                             type=int)

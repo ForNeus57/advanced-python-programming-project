@@ -22,10 +22,7 @@ class PNGChecker(IFormatChecker):
 
     @override
     def check_format(self, file: BinaryIO) -> bool:
-        if check_compare(file, '89504E470D0A1A0A'):
-            return True
-
-        return False
+        return check_compare(file, '89504E470D0A1A0A')
 
     @override
     def type(self) -> KnownFormat:
