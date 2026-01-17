@@ -40,13 +40,13 @@ class BMPChecker(IFormatChecker):
 class DIBHeaderType(IntEnum):
     """Enum containing all the possible DIB headers and their lengths"""
 
-    BITMAP_CORE_HEADER    = 12
-    OS22X_BITMAP_HEADER   = 16
-    BITMAP_INFO_HEADER    = 40
+    BITMAP_CORE_HEADER = 12
+    OS22X_BITMAP_HEADER = 16
+    BITMAP_INFO_HEADER = 40
     BITMAP_V2_INFO_HEADER = 52
     BITMAP_V3_INFO_HEADER = 56
-    BITMAP_V4_HEADER      = 108
-    BITMAP_V5_HEADER      = 124
+    BITMAP_V4_HEADER = 108
+    BITMAP_V5_HEADER = 124
 
 
 class Signature(IntEnum):
@@ -63,16 +63,16 @@ class Signature(IntEnum):
 class CompressionMethod(IntEnum):
     """Bitmap compression method. https://en.wikipedia.org/wiki/BMP_file_format#Compression"""
 
-    BI_RGB             = 0
-    BI_RLE8            = 1
-    BI_RLE4            = 2
-    BI_BITFIELDS       = 3
-    BI_JPEG            = 4
-    BI_PNG             = 5
+    BI_RGB = 0
+    BI_RLE8 = 1
+    BI_RLE4 = 2
+    BI_BITFIELDS = 3
+    BI_JPEG = 4
+    BI_PNG = 5
     BI_ALPHA_BITFIELDS = 6
-    BI_CMYK            = 11
-    BI_CMYK_RLE8       = 12
-    BI_CMYK_RLE4       = 13
+    BI_CMYK = 11
+    BI_CMYK_RLE8 = 12
+    BI_CMYK_RLE4 = 13
 
 
 @dataclass(slots=True)
@@ -98,6 +98,8 @@ class BitmapFileHeader(Sized):
 
     @classmethod
     def from_default(cls, dib_size: int, image_data_size: int) -> 'BitmapFileHeader':
+        """Additional constructor that create the BMP header with correct file length"""
+
         return cls(signature=Signature.BM.value,
                    file_size=cls.HEADER_LENGTH + dib_size + image_data_size,
                    reserved_1=0,
@@ -123,6 +125,8 @@ class BitmapFileHeader(Sized):
 
 @dataclass(slots=True, frozen=True)
 class DIBInfoHeader(Sized):
+    """Class that represents BMP file DIB Info header specific fields"""
+
     BASE_LENGTH_BYTES: ClassVar[int] = 24
 
     compression: int
@@ -134,6 +138,8 @@ class DIBInfoHeader(Sized):
 
     @classmethod
     def from_bytes(cls, data: bytes) -> 'DIBInfoHeader':
+        """Additional constructor for the class to create the object from the raw bytes"""
+
         compression, image_size, x_pixels_in_meters, y_pixels_in_meters, colors_in_color_table, important_color_count =\
             struct.unpack('IIiiII', data)
 
@@ -146,6 +152,8 @@ class DIBInfoHeader(Sized):
 
     @classmethod
     def from_default(cls) -> 'DIBInfoHeader':
+        """Additional constructor for the class to create the object with default values"""
+
         return cls(compression=CompressionMethod.BI_RGB.value,
                    image_size=0,
                    x_pixels_in_meters=200,
@@ -170,9 +178,13 @@ class DIBInfoHeader(Sized):
             raise InvalidFormatException('Invalid format')
 
     def __bytes__(self) -> bytes:
-        return struct.pack('IIiiII', self.compression, self.image_size,
-                                              self.x_pixels_in_meters, self.y_pixels_in_meters,
-                                              self.colors_in_color_table, self.important_color_count)
+        return struct.pack('IIiiII',
+                           self.compression,
+                           self.image_size,
+                           self.x_pixels_in_meters,
+                           self.y_pixels_in_meters,
+                           self.colors_in_color_table,
+                           self.important_color_count)
 
     def __len__(self) -> int:
         return self.BASE_LENGTH_BYTES
@@ -180,6 +192,8 @@ class DIBInfoHeader(Sized):
 
 @dataclass(slots=True, frozen=True)
 class DIBOS22Header(Sized):
+    """Class that represents BMP file DIB OS22 header specific fields"""
+
     BASE_LENGTH_BYTES: ClassVar[int] = 4
 
     planes: int
@@ -188,6 +202,8 @@ class DIBOS22Header(Sized):
 
     @classmethod
     def from_bytes(cls, data: bytes, info_header: Optional[DIBInfoHeader] = None) -> 'DIBOS22Header':
+        """Additional constructor that allows to create this class object from the raw bytes"""
+
         planes, bits_per_pixel = struct.unpack('HH', data)
         return cls(planes=planes,
                    bits_per_pixel=bits_per_pixel,
@@ -195,6 +211,8 @@ class DIBOS22Header(Sized):
 
     @classmethod
     def from_default(cls) -> 'DIBOS22Header':
+        """Additional constructor that allows to create this class object using default initialisation"""
+
         return DIBOS22Header(planes=1,
                              bits_per_pixel=8,
                              info_header=DIBInfoHeader.from_default())
@@ -208,7 +226,7 @@ class DIBOS22Header(Sized):
 
     def __bytes__(self) -> bytes:
         return struct.pack('HH', self.planes, self.bits_per_pixel)\
-               + b'' if self.info_header is None else bytes(self.info_header)
+            + (b'' if self.info_header is None else bytes(self.info_header))
 
     def __len__(self) -> int:
         return self.BASE_LENGTH_BYTES + 0 if self.info_header is None else len(self.info_header)
@@ -216,7 +234,9 @@ class DIBOS22Header(Sized):
 
 @dataclass(slots=True, frozen=True)
 class DIBCoreHeader(Sized):
-    HEADER_SIZE_LEN: ClassVar[int]   = 4
+    """Class that represents BMP file DIB core header specific fields that must always be present in the file"""
+
+    HEADER_SIZE_LEN: ClassVar[int] = 4
     BASE_LENGTH_BYTES: ClassVar[int] = 12
 
     dib_header_size: int
@@ -226,6 +246,8 @@ class DIBCoreHeader(Sized):
 
     @classmethod
     def from_bytes(cls, file: BinaryIO) -> 'DIBCoreHeader':
+        """Additional constructor that allows to create this class object from the raw bytes"""
+
         dib_header_size = file.read(cls.HEADER_SIZE_LEN)
         dib_header_size, = struct.unpack('I', dib_header_size)
         dib_header_no_size = file.read(cls.BASE_LENGTH_BYTES - cls.HEADER_SIZE_LEN)
@@ -260,7 +282,7 @@ class DIBCoreHeader(Sized):
 
     def __bytes__(self) -> bytes:
         return struct.pack('Iii', self.dib_header_size, self.image_width, self.image_height)\
-               + b'' if self.os22_header is None else bytes(self.os22_header)
+            + (b'' if self.os22_header is None else bytes(self.os22_header))
 
     def __len__(self) -> int:
         return self.BASE_LENGTH_BYTES + 0 if self.os22_header is None else len(self.os22_header)
@@ -279,6 +301,8 @@ class DIBCoreHeader(Sized):
             raise InvalidFormatException(f'Wrong: {self.image_height=}')
 
     def get_bits_per_pixel(self) -> int:
+        """Getter for that bits per pixel field that handles the case if the os22 header is not present"""
+
         return 8 if self.os22_header is None else self.os22_header.bits_per_pixel
 
 
@@ -293,7 +317,9 @@ class BMP(Sized):
 
     @classmethod
     def from_bytes(cls, file: BinaryIO) -> 'BMP':
-        header     = BitmapFileHeader.from_bytes(data=file.read(BitmapFileHeader.HEADER_LENGTH))
+        """Additional constructor that allows to create this class object from the raw bytes"""
+
+        header = BitmapFileHeader.from_bytes(data=file.read(BitmapFileHeader.HEADER_LENGTH))
         dib_header = DIBCoreHeader.from_bytes(file)
 
         return cls(header=header,
@@ -303,7 +329,9 @@ class BMP(Sized):
 
     @classmethod
     def from_ndarray(cls, data: np.ndarray) -> 'BMP':
-        image_height, image_width, image_channels = data.shape
+        """Additional constructor that allows to create this class object from numpy array"""
+
+        image_height, image_width, _ = data.shape
         padding = compute_padding(image_width)
 
         image_data = bytearray()
@@ -324,11 +352,13 @@ class BMP(Sized):
                    image_data=image_data)
 
     def to_numpy(self) -> np.ndarray:
-        width          = self.dib_header.image_width
-        height         = self.dib_header.image_height
+        """Converter to a numpy array from a bitmap data"""
+
+        width = self.dib_header.image_width
+        height = self.dib_header.image_height
         bits_per_pixel = self.dib_header.get_bits_per_pixel()
 
-        padding  = self.get_padding()
+        padding = self.get_padding()
         row_size = self.get_row_size()
 
         image_bytes = bytearray()
@@ -345,21 +375,23 @@ class BMP(Sized):
 
     def __bytes__(self) -> bytes:
         return bytes(self.header)\
-               + bytes(self.dib_header)\
-               + (b'' if self.color_table is None else self.color_table)\
-               + self.image_data
+            + bytes(self.dib_header)\
+            + (b'' if self.color_table is None else self.color_table)\
+            + self.image_data
 
     def __len__(self) -> int:
         return len(self.header) + len(self.dib_header) + len(self.image_data)
 
     def get_padding(self) -> int:
+        """Method that computes the number of bytes that are appended at the end of all the row"""
+
         width = self.dib_header.image_width
         return compute_padding(width)
 
     def get_row_size(self) -> int:
         """https://en.wikipedia.org/wiki/BMP_file_format#Pixel_storage"""
 
-        width          = self.dib_header.image_width
+        width = self.dib_header.image_width
         bits_per_pixel = self.dib_header.get_bits_per_pixel()
 
         return ((bits_per_pixel * width + 31) // 32) * 4
@@ -374,32 +406,32 @@ class BMPReader(IFormatReader):     # pylint: disable=too-few-public-methods
         bmp = BMP.from_bytes(file)
         return Image(data=bmp.to_numpy())
 
-        dib_header_size = file.read(4)
-        dib_header_size, = struct.unpack('I', dib_header_size)
-        assert dib_header_size in (12, 64, 16, 40, 52, 56, 108, 124)
-        assert dib_header_size == 40  # BITMAPINFOHEADER
-
-        dib_header_no_size = file.read(dib_header_size - 4)
-        image_width, image_height, panes, bits_per_pixel = struct.unpack('iiHH', dib_header_no_size[:12])
-        assert panes == 1
-        assert bits_per_pixel in (1, 4, 8, 16, 24, 32)
-
-        compression_method, raw_bitmap_data_size, horizontal_resolution, vertical_resolution, \
-            num_colors, num_important_colors = \
-            struct.unpack('IIiiII', dib_header_no_size[12:])
-        assert compression_method == 0
-        assert raw_bitmap_data_size != 0
-
-        padding = (4 - ((3 * image_width) % 4)) % 4
-        row_size = ((bits_per_pixel * image_width + 31) // 32) * 4
-
-        image_bytes = bytearray()
-        for _ in range(image_height):
-            image_bytes += file.read(row_size)[:row_size - padding]
-
-        num_colors_end = bits_per_pixel // 8
-        return Image(data=np.frombuffer(bytes(image_bytes),
-                                        dtype=np.uint8).reshape(image_height, image_width, num_colors_end))
+        # dib_header_size = file.read(4)
+        # dib_header_size, = struct.unpack('I', dib_header_size)
+        # assert dib_header_size in (12, 64, 16, 40, 52, 56, 108, 124)
+        # assert dib_header_size == 40  # BITMAPINFOHEADER
+        #
+        # dib_header_no_size = file.read(dib_header_size - 4)
+        # image_width, image_height, panes, bits_per_pixel = struct.unpack('iiHH', dib_header_no_size[:12])
+        # assert panes == 1
+        # assert bits_per_pixel in (1, 4, 8, 16, 24, 32)
+        #
+        # compression_method, raw_bitmap_data_size, horizontal_resolution, vertical_resolution, \
+        #     num_colors, num_important_colors = \
+        #     struct.unpack('IIiiII', dib_header_no_size[12:])
+        # assert compression_method == 0
+        # assert raw_bitmap_data_size != 0
+        #
+        # padding = (4 - ((3 * image_width) % 4)) % 4
+        # row_size = ((bits_per_pixel * image_width + 31) // 32) * 4
+        #
+        # image_bytes = bytearray()
+        # for _ in range(image_height):
+        #     image_bytes += file.read(row_size)[:row_size - padding]
+        #
+        # num_colors_end = bits_per_pixel // 8
+        # return Image(data=np.frombuffer(bytes(image_bytes),
+        #                                 dtype=np.uint8).reshape(image_height, image_width, num_colors_end))
 
 
 @final
@@ -410,27 +442,26 @@ class BMPWriter(IFormatWriter):     # pylint: disable=too-few-public-methods
     def write_format(self, file: BinaryIO, input_image: Image) -> None:
         bmp = BMP.from_ndarray(input_image.data)
         file.write(bytes(bmp))
-        return
 
-        input_arr = input_image.data
-
-        image_height, image_width, num_colors = input_arr.shape
-        bits_per_pixel = num_colors * 8
-        padding = (4 - ((3 * image_width) % 4)) % 4
-        row_size = ((bits_per_pixel * image_width + 31) // 32) * 4
-        raw_bitmap_data_size = row_size * image_height
-
-        file_size = 54 + raw_bitmap_data_size
-
-        file.write(b''.join((
-            struct.pack('BB', 0x42, 0x4D),      # signature
-            struct.pack('I', file_size),        # file_size
-            struct.pack('HH', 0, 0),            # reserved1 & reserved2
-            struct.pack('I', 54),               # file_offset_to_pixel_array
-            struct.pack('I', 40),               # dbi header size
-            struct.pack('iiHH', image_width, image_height, 1, bits_per_pixel),
-            struct.pack('IIiiII', 0, raw_bitmap_data_size, 2834, 2834, 0, 0),
-        )))
-
-        for i in range(image_height):
-            file.write(input_arr[i].tobytes() + bytes([0] * padding))
+        # input_arr = input_image.data
+        #
+        # image_height, image_width, num_colors = input_arr.shape
+        # bits_per_pixel = num_colors * 8
+        # padding = (4 - ((3 * image_width) % 4)) % 4
+        # row_size = ((bits_per_pixel * image_width + 31) // 32) * 4
+        # raw_bitmap_data_size = row_size * image_height
+        #
+        # file_size = 54 + raw_bitmap_data_size
+        #
+        # file.write(b''.join((
+        #     struct.pack('BB', 0x42, 0x4D),      # signature
+        #     struct.pack('I', file_size),        # file_size
+        #     struct.pack('HH', 0, 0),            # reserved1 & reserved2
+        #     struct.pack('I', 54),               # file_offset_to_pixel_array
+        #     struct.pack('I', 40),               # dbi header size
+        #     struct.pack('iiHH', image_width, image_height, 1, bits_per_pixel),
+        #     struct.pack('IIiiII', 0, raw_bitmap_data_size, 2834, 2834, 0, 0),
+        # )))
+        #
+        # for i in range(image_height):
+        #     file.write(input_arr[i].tobytes() + bytes([0] * padding))

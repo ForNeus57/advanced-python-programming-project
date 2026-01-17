@@ -50,8 +50,6 @@ def prepare_command(command: IOperation) -> Callable[[Namespace], int]:
     """Function that decorates the operation in order to provide input and output to it"""
 
     def wrapper(args: Namespace) -> int:
-        nonlocal command
-
         with map_input(args.input) as input_source:
             data_format = determine_format(input_source)
 

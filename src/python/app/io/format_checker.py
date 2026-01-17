@@ -25,11 +25,13 @@ def check_compare(file: BinaryIO, signature: str) -> bool:
     signature_bytes = bytes.fromhex(signature.lower())
     return rest_read_bytes(file, len(signature_bytes)) == signature_bytes
 
+
 def rest_read_bytes(file: BinaryIO, n: int) -> bytes:
     """Resets the binary stream and reads n bytes"""
 
     reset_stream(file)
     return file.read(n)
+
 
 def reset_stream(file: BinaryIO) -> None:
     """Resets the binary interface pointer to the start of the file"""

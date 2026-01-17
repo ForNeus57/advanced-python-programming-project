@@ -1,7 +1,7 @@
 .PHONY: all python-install python-install-development python-install-editable clang-format clang-tidy mypy ruff flake8 pylint pytest pytest-coverage
 
 
-all: clang-tidy mypy ruff flake8 pylint
+all: clang-tidy mypy ruff flake8 pylint pytest-coverage
 	echo 'All'
 
 python-install:
@@ -29,7 +29,7 @@ ruff:
 	ruff check ./src/python/
 
 flake8:
-	flake8 --ignore=E127 ./src/python/
+	flake8 ./src/python/
 
 pylint:
 	pylint ./src/python/
@@ -38,5 +38,5 @@ pytest:
 	pytest
 
 pytest-coverage:
-	coverage run -m pytest
+	coverage run -m pytest ./tests/python
 	coverage report --show-missing

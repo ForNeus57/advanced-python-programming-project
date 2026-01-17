@@ -19,6 +19,7 @@ from app.io.known_format import KnownFormat
 
 @final
 class PNGChecker(IFormatChecker):
+    """Class checking if a given file starts with a PNG signature. Used for the type deduction"""
 
     @override
     def check_format(self, file: BinaryIO) -> bool:
@@ -52,6 +53,8 @@ class PNGSignature:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> 'PNGSignature':
+        """Additional constructor for PNG Signature form raw data bytes"""
+
         if len(data) < cls.SIGNATURE_LENGTH:
             raise InvalidFormatException(
                 f"Signature too short, received: {len(data)} instead of {cls.SIGNATURE_LENGTH}"
@@ -61,6 +64,8 @@ class PNGSignature:
 
     @classmethod
     def from_default(cls) -> 'PNGSignature':
+        """Additional constructor for PNG Signature form default values"""
+
         return cls(start_transmission_byte=cls.START_TRANSMISSION_BYTE,
                    signature_p=cls.ASCII_P,
                    signature_n=cls.ASCII_N,
@@ -96,6 +101,8 @@ class PNGSignature:
 
 
 class ChunkType(IntEnum):
+    """https://en.wikipedia.org/wiki/PNG#%22Chunks%22_within_the_file"""
+
     # pylint: disable=invalid-name
     IHDR = 0x49484452
     PLTE = 0x504C5445
@@ -128,9 +135,13 @@ class ChunkType(IntEnum):
 
     @classmethod
     def map_data_to_chunk_type(cls, data: bytes) -> 'ChunkType':
+        """Additional constructor that converts the 4 bytes of the type to a ChunkType enum"""
+
         return cls(*struct.unpack('>I', data))
 
     def map_chunk_type_to_data_class(self):
+        """Convert the Chunk type to a class that will handle parsing of the chunk data filed"""
+
         match self:
             case ChunkType.IHDR:
                 return IHDRData
@@ -148,15 +159,20 @@ class ChunkType(IntEnum):
                 return NotCriticalData
 
 
-class ChunkDataTypeSerializer(ABC):     # pylint: disable=too-few-public-methods
+class IChunkDataTypeSerializer(ABC):
+    """Interface for the Chunk data serialization"""
 
     @abstractmethod
     def type(self) -> ChunkType:
+        """Method that returns the Chunk type the serializer can parse"""
+
+    @abstractmethod
+    def __bytes__(self) -> bytes:
         pass
 
 
 @dataclass(slots=True, frozen=True)
-class IHDRData(ChunkDataTypeSerializer):
+class IHDRData(IChunkDataTypeSerializer):
     """IHDR"""
 
     DATA_LENGTH: ClassVar[int] = 13
@@ -178,6 +194,8 @@ class IHDRData(ChunkDataTypeSerializer):
 
     @classmethod
     def from_bytes(cls, data: bytes) -> 'IHDRData':
+        """Additional constructor for the class that allows the object creation from the raw data"""
+
         if len(data) < cls.DATA_LENGTH:
             raise InvalidFormatException(f"Header too short, received: {len(data)} instead of {cls.DATA_LENGTH}")
 
@@ -185,6 +203,8 @@ class IHDRData(ChunkDataTypeSerializer):
 
     @classmethod
     def from_numpy(cls, data: np.ndarray) -> 'IHDRData':
+        """Additional constructor for the class that allows the object creation from the raw data"""
+
         return cls(width=data.shape[1],
                    height=data.shape[0],
                    bit_depth=16 if data.dtype == np.uint16 else 8,
@@ -206,13 +226,15 @@ class IHDRData(ChunkDataTypeSerializer):
 
 
 @dataclass(slots=True, frozen=True)
-class PLTEData(ChunkDataTypeSerializer):
+class PLTEData(IChunkDataTypeSerializer):
     """PLTE"""
 
     palette_entries: np.ndarray
 
     @classmethod
     def from_bytes(cls, data: bytes) -> 'PLTEData':
+        """Additional constructor for the class that allows the object creation from the raw data"""
+
         length, remainder = divmod(len(data), 3)
         if remainder != 0:
             raise InvalidFormatException("Wrong Palette")
@@ -238,7 +260,7 @@ class PLTEData(ChunkDataTypeSerializer):
 
 
 @dataclass(slots=True, frozen=True)
-class IDATData(ChunkDataTypeSerializer):
+class IDATData(IChunkDataTypeSerializer):
     """IDAT"""
 
     compressed_data: bytes
@@ -274,7 +296,7 @@ class IDATData(ChunkDataTypeSerializer):
 
 
 @dataclass(slots=True, frozen=True)
-class IENDData(ChunkDataTypeSerializer):
+class IENDData(IChunkDataTypeSerializer):
     """IEND"""
 
     @classmethod
@@ -295,7 +317,7 @@ class IENDData(ChunkDataTypeSerializer):
 
 
 @dataclass(slots=True, frozen=True)
-class NotCriticalData(ChunkDataTypeSerializer):
+class NotCriticalData(IChunkDataTypeSerializer):
     """Other"""
 
     data: bytes
@@ -314,7 +336,7 @@ class NotCriticalData(ChunkDataTypeSerializer):
 
 
 @dataclass(slots=True, frozen=True)
-class PNGChunk[T: ChunkDataTypeSerializer]:
+class PNGChunk[T: IChunkDataTypeSerializer]:
     """Class representing the whole chunk from the PNG file. (One chunk of many)"""
 
     length: int
@@ -338,7 +360,7 @@ class PNGChunk[T: ChunkDataTypeSerializer]:
                         crc=crc), rest
 
     @classmethod
-    def from_chunk[U](cls, chunk: U) -> 'PNGChunk[U]':
+    def from_chunk[U: IChunkDataTypeSerializer](cls, chunk: U) -> 'PNGChunk[U]':
         """Additional constructor that creates the chunk from chunk binary data."""
         chunk_bytes_data = bytes(chunk)
         chunk_length = len(chunk_bytes_data)
@@ -359,8 +381,8 @@ class PNGChunk[T: ChunkDataTypeSerializer]:
 
     def __bytes__(self) -> bytes:
         return struct.pack('>II', self.length, self.chunk_type.value) \
-               + bytes(self.chunk_data) \
-               + struct.pack('>I', self.crc)
+            + bytes(self.chunk_data) \
+            + struct.pack('>I', self.crc)
 
 
 @dataclass(slots=True)
@@ -430,7 +452,6 @@ class PNG:
         return np.frombuffer(stream, dtype=np.uint8).reshape(self.i_header.chunk_data.height,
                                                              self.i_header.chunk_data.width,
                                                              4)[:, :, :-1]
-
 
     def to_file(self, file: BinaryIO) -> None:
         """Serializes the object to a BinaryIO interface"""

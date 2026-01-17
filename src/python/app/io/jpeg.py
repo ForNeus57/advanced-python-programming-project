@@ -10,6 +10,7 @@ from app.io.known_format import KnownFormat
 from app.io.format_reader import IFormatReader
 from app.io.format_writer import IFormatWriter
 
+
 @final
 class JPEGChecker(IFormatChecker):
     """Class comparing the file signature to deduce file format"""
@@ -17,11 +18,11 @@ class JPEGChecker(IFormatChecker):
     @override
     def check_format(self, file: BinaryIO) -> bool:
         return check_compare(file, 'FFD8FFDB')\
-                or check_compare(file, 'FFD8FFE000104A4649460001')\
-                or check_compare(file, 'FFD8FFEE')\
-                or check_compare(file, 'FFD8FFE0')\
-                or check_compare(file, '0000000C6A5020200D0A870A')\
-                or check_compare(file, 'FF4FFF51')
+            or check_compare(file, 'FFD8FFE000104A4649460001')\
+            or check_compare(file, 'FFD8FFEE')\
+            or check_compare(file, 'FFD8FFE0')\
+            or check_compare(file, '0000000C6A5020200D0A870A')\
+            or check_compare(file, 'FF4FFF51')
 
     @override
     def type(self) -> KnownFormat:
@@ -34,6 +35,9 @@ class JPEGReader(IFormatReader):        # pylint: disable=too-few-public-methods
 
     @override
     def read_format(self, file: BinaryIO) -> Image:
+        # Module app.fast is lazy imported in order to allow the end user without CUDA driver installed to run the other
+        # application functionalists.
+
         import app.fast     # pylint: disable=import-outside-toplevel
         return Image(data=app.fast.decode_jpeg(file.read()))
 
@@ -44,5 +48,8 @@ class JPEGWriter(IFormatWriter):        # pylint: disable=too-few-public-methods
 
     @override
     def write_format(self, file: BinaryIO, input_image: Image) -> None:
+        # Module app.fast is lazy imported in order to allow the end user without CUDA driver installed to run the other
+        # application functionalists.
+
         import app.fast     # pylint: disable=import-outside-toplevel
         file.write(app.fast.encode_jpeg(np.flip(input_image.data[:, :, ::-1], axis=0).copy()))
