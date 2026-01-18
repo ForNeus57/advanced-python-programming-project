@@ -217,7 +217,7 @@ class DIBOS22Header(Sized):
         """Additional constructor that allows to create this class object using default initialisation"""
 
         return DIBOS22Header(planes=1,
-                             bits_per_pixel=8,
+                             bits_per_pixel=24,
                              info_header=DIBInfoHeader.from_default())
 
     def __post_init__(self) -> None:
@@ -303,11 +303,11 @@ class DIBCoreHeader(Sized):
     def get_bits_per_pixel(self) -> int:
         """Getter for that bits per pixel field that handles the case if the os22 header is not present"""
 
-        return 8 if self.os22_header is None else self.os22_header.bits_per_pixel
+        return 24 if self.os22_header is None else self.os22_header.bits_per_pixel
 
 
 @dataclass(slots=True)
-class BMP(Sized):
+class BMP:
     """Class that represents the BMP file in a structured way"""
 
     header: BitmapFileHeader
@@ -369,18 +369,11 @@ class BMP(Sized):
         return np.frombuffer(bytes(image_bytes),
                              dtype=np.uint8).reshape(height, width, num_colors_end)
 
-    def __post_init__(self) -> None:
-        if len(self.image_data) != self.header.file_size - self.header.file_offset_to_pixel_array:
-            raise InvalidFormatException('Invalid argument')
-
     def __bytes__(self) -> bytes:
         return bytes(self.header)\
             + bytes(self.dib_header)\
             + (b'' if self.color_table is None else self.color_table)\
             + self.image_data
-
-    def __len__(self) -> int:
-        return len(self.header) + len(self.dib_header) + len(self.image_data)
 
     def get_padding(self) -> int:
         """Method that computes the number of bytes that are appended at the end of all the row"""
@@ -405,6 +398,7 @@ class BMPReader(IFormatReader):     # pylint: disable=too-few-public-methods
     def read_format(self, file: BinaryIO) -> Image:
         bmp = BMP.from_bytes(file)
         return Image(data=bmp.to_numpy())
+
 
 @final
 class BMPWriter(IFormatWriter):     # pylint: disable=too-few-public-methods

@@ -2,7 +2,7 @@
 
 
 all: clang-tidy mypy ruff flake8 pylint pytest-coverage
-	echo 'All'
+
 
 python-install:
 	pip3 install cuda-toolkit[cudart,nvcc,nvjpeg]==12.4.1

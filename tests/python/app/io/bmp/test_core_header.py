@@ -93,8 +93,8 @@ def test_bmp_header_length_no_trailer(dib_header_size: int, image_width: int, im
     1, 15, 7211, 323,
 ])
 @pytest.mark.parametrize('trailer,expected_length', [
-    (None, 8,),
-    (DIBOS22Header.from_default(), 8,),
+    (None, 24,),
+    (DIBOS22Header.from_default(), 24,),
     (DIBOS22Header.from_bytes(b'\x01\x00\x18\x00'), 24,),
     (DIBOS22Header.from_bytes(b'\x01\x00 \x00'), 32,),
 ])

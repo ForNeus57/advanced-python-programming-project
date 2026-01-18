@@ -6,7 +6,7 @@ from app.io.bmp import DIBInfoHeader, DIBOS22Header
 
 def test_bmp_header_from_default() -> None:
     default_header = DIBOS22Header.from_default()
-    expected_header = DIBOS22Header(1, 8, DIBInfoHeader.from_default())
+    expected_header = DIBOS22Header(1, 24, DIBInfoHeader.from_default())
 
     assert default_header == expected_header
     assert len(default_header) == len(expected_header)
