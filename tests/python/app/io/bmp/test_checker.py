@@ -37,6 +37,25 @@ def test_bmp_checker_check_format_false(input_data: BinaryIO) -> None:
     assert KnownFormat.BMP == BMPChecker().type()
 
 
-# @pytest.mark.parametrize('input_file', [
-#     ''
-# ])
+def test_invalid_bmp_from_png(resource_png) -> None:
+    checker = BMPChecker()
+    assert checker.check_format(resource_png) == False
+    assert KnownFormat.BMP == BMPChecker().type()
+
+
+def test_invalid_bmp_from_jpg(resource_jpg) -> None:
+    checker = BMPChecker()
+    assert checker.check_format(resource_jpg) == False
+    assert KnownFormat.BMP == BMPChecker().type()
+
+
+def test_invalid_bmp_from_avif(resource_avif) -> None:
+    checker = BMPChecker()
+    assert checker.check_format(resource_avif) == False
+    assert KnownFormat.BMP == BMPChecker().type()
+
+
+def test_valid_bmp(resource_bmp) -> None:
+    checker = BMPChecker()
+    assert checker.check_format(resource_bmp) == True
+    assert KnownFormat.BMP == BMPChecker().type()

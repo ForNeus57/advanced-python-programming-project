@@ -52,12 +52,12 @@ class DIBHeaderType(IntEnum):
 class Signature(IntEnum):
     """Enum containing all possible signature values"""
 
-    BM = 16973
-    BA = 16961
-    CI = 17225
-    CP = 17232
-    IC = 18755
-    PT = 20564
+    BM = 19778
+    BA = 16706
+    CI = 18755
+    CP = 20547
+    IC = 17225
+    PT = 21584
 
 
 class CompressionMethod(IntEnum):
@@ -92,9 +92,9 @@ class BitmapFileHeader(Sized):
         """Additional constructor that serializes the BMP format signature"""
 
         if len(data) < cls.HEADER_LENGTH:
-            raise InvalidFormatException(f"Header too short, received: {len(data)} instead of {cls.HEADER_LENGTH}")
+            raise InvalidFormatException("Invalid signature")
 
-        return cls(*struct.unpack('>HIHHI', data))
+        return cls(*struct.unpack('<HIHHI', data))
 
     @classmethod
     def from_default(cls, dib_size: int, image_data_size: int) -> 'BitmapFileHeader':
@@ -111,13 +111,13 @@ class BitmapFileHeader(Sized):
             raise InvalidFormatException("Invalid signature")
 
         if self.file_size < self.HEADER_LENGTH + DIBHeaderType.BITMAP_CORE_HEADER:
-            raise InvalidFormatException("File too short to parse the next data")
+            raise InvalidFormatException("Invalid signature")
 
         if self.file_offset_to_pixel_array > self.file_size:
-            raise InvalidFormatException("Invalid offset to pixel array")
+            raise InvalidFormatException("Invalid signature")
 
     def __bytes__(self) -> bytes:
-        return struct.pack('>HIHHI', *astuple(self))
+        return struct.pack('<HIHHI', *astuple(self))
 
     def __len__(self) -> int:
         return self.HEADER_LENGTH
@@ -141,7 +141,7 @@ class DIBInfoHeader(Sized):
         """Additional constructor for the class to create the object from the raw bytes"""
 
         compression, image_size, x_pixels_in_meters, y_pixels_in_meters, colors_in_color_table, important_color_count =\
-            struct.unpack('IIiiII', data)
+            struct.unpack('<IIiiII', data)
 
         return cls(compression=compression,
                    image_size=image_size,
@@ -155,15 +155,18 @@ class DIBInfoHeader(Sized):
         """Additional constructor for the class to create the object with default values"""
 
         return cls(compression=CompressionMethod.BI_RGB.value,
-                   image_size=0,
+                   image_size=1,
                    x_pixels_in_meters=200,
                    y_pixels_in_meters=200,
                    colors_in_color_table=0,
                    important_color_count=0)
 
     def __post_init__(self) -> None:
-        if self.compression != CompressionMethod.BI_RGB.value:
-            raise NotImplementedError
+        if self.compression not in set(e.value for e in CompressionMethod):
+            raise InvalidFormatException('Invalid format')
+
+        if self.image_size <= 0:
+            raise InvalidFormatException('Invalid format')
 
         if self.x_pixels_in_meters <= 0:
             raise InvalidFormatException('Invalid format')
@@ -178,7 +181,7 @@ class DIBInfoHeader(Sized):
             raise InvalidFormatException('Invalid format')
 
     def __bytes__(self) -> bytes:
-        return struct.pack('IIiiII',
+        return struct.pack('<IIiiII',
                            self.compression,
                            self.image_size,
                            self.x_pixels_in_meters,
@@ -204,7 +207,7 @@ class DIBOS22Header(Sized):
     def from_bytes(cls, data: bytes, info_header: Optional[DIBInfoHeader] = None) -> 'DIBOS22Header':
         """Additional constructor that allows to create this class object from the raw bytes"""
 
-        planes, bits_per_pixel = struct.unpack('HH', data)
+        planes, bits_per_pixel = struct.unpack('<HH', data)
         return cls(planes=planes,
                    bits_per_pixel=bits_per_pixel,
                    info_header=info_header)
@@ -225,11 +228,11 @@ class DIBOS22Header(Sized):
             raise InvalidFormatException('Invalid format')
 
     def __bytes__(self) -> bytes:
-        return struct.pack('HH', self.planes, self.bits_per_pixel)\
+        return struct.pack('<HH', self.planes, self.bits_per_pixel)\
             + (b'' if self.info_header is None else bytes(self.info_header))
 
     def __len__(self) -> int:
-        return self.BASE_LENGTH_BYTES + 0 if self.info_header is None else len(self.info_header)
+        return self.BASE_LENGTH_BYTES + (0 if self.info_header is None else len(self.info_header))
 
 
 @dataclass(slots=True, frozen=True)
@@ -278,21 +281,18 @@ class DIBCoreHeader(Sized):
                                                                 info_header=DIBInfoHeader.from_bytes(
                                                                     info_header_raw_bytes)))
 
-        raise NotImplementedError
+        raise InvalidFormatException('Invalid Format')
 
     def __bytes__(self) -> bytes:
         return struct.pack('Iii', self.dib_header_size, self.image_width, self.image_height)\
             + (b'' if self.os22_header is None else bytes(self.os22_header))
 
     def __len__(self) -> int:
-        return self.BASE_LENGTH_BYTES + 0 if self.os22_header is None else len(self.os22_header)
+        return self.BASE_LENGTH_BYTES + (0 if self.os22_header is None else len(self.os22_header))
 
     def __post_init__(self) -> None:
         if self.dib_header_size not in {12, 16, 40, 52, 56, 108, 124}:
             raise InvalidFormatException(f'Wrong: {self.dib_header_size=}')
-
-        if self.dib_header_size > 40:
-            raise NotImplementedError
 
         if self.image_width <= 0:
             raise InvalidFormatException(f'Wrong: {self.image_width=}')
@@ -406,34 +406,6 @@ class BMPReader(IFormatReader):     # pylint: disable=too-few-public-methods
         bmp = BMP.from_bytes(file)
         return Image(data=bmp.to_numpy())
 
-        # dib_header_size = file.read(4)
-        # dib_header_size, = struct.unpack('I', dib_header_size)
-        # assert dib_header_size in (12, 64, 16, 40, 52, 56, 108, 124)
-        # assert dib_header_size == 40  # BITMAPINFOHEADER
-        #
-        # dib_header_no_size = file.read(dib_header_size - 4)
-        # image_width, image_height, panes, bits_per_pixel = struct.unpack('iiHH', dib_header_no_size[:12])
-        # assert panes == 1
-        # assert bits_per_pixel in (1, 4, 8, 16, 24, 32)
-        #
-        # compression_method, raw_bitmap_data_size, horizontal_resolution, vertical_resolution, \
-        #     num_colors, num_important_colors = \
-        #     struct.unpack('IIiiII', dib_header_no_size[12:])
-        # assert compression_method == 0
-        # assert raw_bitmap_data_size != 0
-        #
-        # padding = (4 - ((3 * image_width) % 4)) % 4
-        # row_size = ((bits_per_pixel * image_width + 31) // 32) * 4
-        #
-        # image_bytes = bytearray()
-        # for _ in range(image_height):
-        #     image_bytes += file.read(row_size)[:row_size - padding]
-        #
-        # num_colors_end = bits_per_pixel // 8
-        # return Image(data=np.frombuffer(bytes(image_bytes),
-        #                                 dtype=np.uint8).reshape(image_height, image_width, num_colors_end))
-
-
 @final
 class BMPWriter(IFormatWriter):     # pylint: disable=too-few-public-methods
     """Class that serializes Image to BMP format"""
@@ -442,26 +414,3 @@ class BMPWriter(IFormatWriter):     # pylint: disable=too-few-public-methods
     def write_format(self, file: BinaryIO, input_image: Image) -> None:
         bmp = BMP.from_ndarray(input_image.data)
         file.write(bytes(bmp))
-
-        # input_arr = input_image.data
-        #
-        # image_height, image_width, num_colors = input_arr.shape
-        # bits_per_pixel = num_colors * 8
-        # padding = (4 - ((3 * image_width) % 4)) % 4
-        # row_size = ((bits_per_pixel * image_width + 31) // 32) * 4
-        # raw_bitmap_data_size = row_size * image_height
-        #
-        # file_size = 54 + raw_bitmap_data_size
-        #
-        # file.write(b''.join((
-        #     struct.pack('BB', 0x42, 0x4D),      # signature
-        #     struct.pack('I', file_size),        # file_size
-        #     struct.pack('HH', 0, 0),            # reserved1 & reserved2
-        #     struct.pack('I', 54),               # file_offset_to_pixel_array
-        #     struct.pack('I', 40),               # dbi header size
-        #     struct.pack('iiHH', image_width, image_height, 1, bits_per_pixel),
-        #     struct.pack('IIiiII', 0, raw_bitmap_data_size, 2834, 2834, 0, 0),
-        # )))
-        #
-        # for i in range(image_height):
-        #     file.write(input_arr[i].tobytes() + bytes([0] * padding))
